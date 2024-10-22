@@ -1,0 +1,43 @@
+#!/bin/bash
+
+# cd to the script dir
+cd $(dirname $0)
+
+llvm_install_dir="thirdparty/build/llvm/install"
+llvm_bin_dir="$llvm_install_dir/bin"
+
+declare -A COMMAND_MAP=(
+    ["thirdparty"]="scripts/thirdparty.sh"
+    ["configure"]="scripts/configure.sh"
+    ["build"]="ninja -j$(nproc) -C build"
+    ["nyacc"]="build/nyacc"
+    ["lli"]="$llvm_bin_dir/lli"
+)
+
+function show_help() {
+    echo "Available commands:"
+    for cmd in "${!COMMAND_MAP[@]}"; do
+        echo "  $cmd -> ${COMMAND_MAP[$cmd]}"
+    done
+}
+
+if [ "$#" -lt 1 ]; then
+    echo "Usage: $0 <command name> <args>"
+    exit 1
+fi
+
+COMMAND_NAME=$1
+shift 
+
+if [ "$COMMAND_NAME" == "help" ]; then
+    show_help
+    exit 0
+fi
+
+if [[ -n "${COMMAND_MAP[$COMMAND_NAME]}" ]]; then
+    ${COMMAND_MAP[$COMMAND_NAME]} "$@"
+else
+    echo "Error: Unknown command name '$COMMAND_NAME'"
+    echo "Use '$0 help' to see available commands."
+    exit 1
+fi
