@@ -3,6 +3,7 @@ set(SRC_FILES
     main.cpp
     lexer.cpp
     ast.cpp
+    parser.cpp
 )
 
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)

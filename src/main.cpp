@@ -14,6 +14,7 @@
 #include <mlir/Target/LLVMIR/Export.h>
 
 #include "lexer.h"
+#include "parser.h"
 #include "ast.h"
 
 mlir::LLVM::LLVMFunctionType
@@ -80,6 +81,9 @@ int main() {
     for (const auto &token : tokens) {
         std::cout << token << "\n";
     }
+    nyacc::Parser parser{tokens};
+    auto moduleAst = parser.parseModule();
+    moduleAst.dump();
 
     // Initialize MLIR context
     mlir::MLIRContext context;

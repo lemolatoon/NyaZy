@@ -22,6 +22,9 @@ namespace nyacc {
             TokenKind getKind() const {
                 return kind_;
             }
+            std::string_view text() const {
+                return text_;
+            }
 
             friend std::ostream& operator<<(std::ostream &os, const Token &token);
         private:
