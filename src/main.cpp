@@ -7,10 +7,14 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/IR/BuiltinDialect.h"
+#include <iostream>
 #include <llvm/Support/raw_ostream.h>
 #include <mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h>
 #include <mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h>
 #include <mlir/Target/LLVMIR/Export.h>
+
+#include "lexer.h"
+#include "ast.h"
 
 mlir::LLVM::LLVMFunctionType
   getPrintfType(mlir::MLIRContext *context) {
@@ -70,6 +74,13 @@ mlir::Value getOrCreateGlobalString(mlir::Location loc, mlir::OpBuilder &builder
 }
 
 int main() {
+
+    nyacc::Lexer lexer("123");
+    const auto tokens = lexer.tokenize();
+    for (const auto &token : tokens) {
+        std::cout << token << "\n";
+    }
+
     // Initialize MLIR context
     mlir::MLIRContext context;
     context.getOrLoadDialect<mlir::BuiltinDialect>();

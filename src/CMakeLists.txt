@@ -1,5 +1,9 @@
 # Locate all the .cpp files in the src directory
-file(GLOB_RECURSE SRC_FILES *.cpp)
+set(SRC_FILES
+    main.cpp
+    lexer.cpp
+    ast.cpp
+)
 
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 get_property(extension_libs GLOBAL PROPERTY MLIR_EXTENSION_LIBS)
