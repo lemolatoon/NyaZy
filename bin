@@ -1,43 +1,51 @@
-#!/bin/bash
+#!/usr/bin/env python3
+
+import os
+import sys
+import subprocess
 
 # cd to the script dir
-cd $(dirname $0)
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
-llvm_install_dir="thirdparty/build/llvm/install"
-llvm_bin_dir="$llvm_install_dir/bin"
+llvm_install_dir = "thirdparty/build/llvm/install"
+llvm_bin_dir = os.path.join(llvm_install_dir, "bin")
 
-declare -A COMMAND_MAP=(
-    ["thirdparty"]="scripts/thirdparty.sh"
-    ["configure"]="scripts/configure.sh"
-    ["build"]="ninja -j$(nproc) -C build"
-    ["nyacc"]="build/nyacc"
-    ["lli"]="$llvm_bin_dir/lli"
-)
-
-function show_help() {
-    echo "Available commands:"
-    for cmd in "${!COMMAND_MAP[@]}"; do
-        echo "  $cmd -> ${COMMAND_MAP[$cmd]}"
-    done
+COMMAND_MAP = {
+    "thirdparty": "scripts/thirdparty.sh",
+    "configure": "scripts/configure.sh",
+    "build": f"ninja -j{os.cpu_count()} -C build",
+    "nyacc": "build/nyacc",
+    "lli": os.path.join(llvm_bin_dir, "lli")
 }
 
-if [ "$#" -lt 1 ]; then
-    echo "Usage: $0 <command name> <args>"
-    exit 1
-fi
+def show_help():
+    print("Available commands:")
+    for cmd, cmd_path in COMMAND_MAP.items():
+        print(f"  {cmd} -> {cmd_path}")
 
-COMMAND_NAME=$1
-shift 
+def main():
+    if len(sys.argv) < 2:
+        print(f"Usage: {sys.argv[0]} <command name> <args>")
+        sys.exit(1)
 
-if [ "$COMMAND_NAME" == "help" ]; then
-    show_help
-    exit 0
-fi
+    command_name = sys.argv[1]
+    args = sys.argv[2:]
 
-if [[ -n "${COMMAND_MAP[$COMMAND_NAME]}" ]]; then
-    ${COMMAND_MAP[$COMMAND_NAME]} "$@"
-else
-    echo "Error: Unknown command name '$COMMAND_NAME'"
-    echo "Use '$0 help' to see available commands."
-    exit 1
-fi
+    if command_name == "help":
+        show_help()
+        sys.exit(0)
+
+    if command_name in COMMAND_MAP:
+        command = COMMAND_MAP[command_name]
+        try:
+            subprocess.run([command] + args, check=True, shell=True)
+        except subprocess.CalledProcessError as e:
+            print(f"Error: Command '{command_name}' failed with exit code {e.returncode}")
+            sys.exit(e.returncode)
+    else:
+        print(f"Error: Unknown command name '{command_name}'")
+        print(f"Use '{sys.argv[0]} help' to see available commands.")
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()
