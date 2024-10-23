@@ -7,7 +7,6 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/IR/BuiltinDialect.h"
-#include <llvm-14/llvm/IR/LLVMContext.h>
 #include <llvm/Support/raw_ostream.h>
 #include <mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h>
 #include <mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h>
