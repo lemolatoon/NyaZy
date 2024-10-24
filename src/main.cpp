@@ -17,6 +17,9 @@
 #include "parser.h"
 #include "ast.h"
 
+#include "NyaZyDialect.h"
+#include "NyaZyOps.h"
+
 mlir::LLVM::LLVMFunctionType
   getPrintfType(mlir::MLIRContext *context) {
     auto llvmI32Type = mlir::IntegerType::get(context, 32);

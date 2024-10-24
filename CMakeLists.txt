@@ -33,6 +33,14 @@ link_directories(${LLVM_BUILD_LIBRARY_DIR})
 add_executable(nyacc)
 target_compile_options(nyacc PRIVATE -Wall -Wextra -Werror -fno-rtti)
 
+add_subdirectory(mlir)
+
+add_dependencies(nyacc MLIRNyaZyOpsIncGen)
+add_dependencies(nyacc MLIRNyaZyDialectIncGen)
+
+include_directories(mlir)
+include_directories(${CMAKE_BINARY_DIR}/mlir)
+
 # Add subdirectories for src and test
 add_subdirectory(src)
 # add_subdirectory(test)
