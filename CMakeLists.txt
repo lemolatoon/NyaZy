@@ -5,6 +5,8 @@ set(CMAKE_CXX_STANDARD 20)
 
 include(ExternalProject)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 set(LLVM_DIR ${CMAKE_BINARY_DIR}/../thirdparty/build/llvm/install/lib/cmake/llvm)
 set(MLIR_DIR ${CMAKE_BINARY_DIR}/../thirdparty/build/llvm/install/lib/cmake/mlir)
 
