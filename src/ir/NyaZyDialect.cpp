@@ -1,5 +1,5 @@
-#include "NyaZyDialect.h"
-#include "NyaZyOps.h"
+#include "ir/NyaZyDialect.h"
+#include "ir/NyaZyOps.h"
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wall"

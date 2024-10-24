@@ -18,8 +18,8 @@
 #include "parser.h"
 #include "ast.h"
 
-#include "NyaZyDialect.h"
-#include "NyaZyOps.h"
+#include "ir/NyaZyDialect.h"
+#include "ir/NyaZyOps.h"
 
 mlir::LLVM::LLVMFunctionType
   getPrintfType(mlir::MLIRContext *context) {

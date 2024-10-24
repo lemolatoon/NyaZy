@@ -1,3 +1,5 @@
+add_subdirectory(ir)
+
 # Locate all the .cpp files in the src directory
 set(SRC_FILES
     main.cpp

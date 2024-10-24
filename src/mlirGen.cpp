@@ -1,5 +1,5 @@
 #include "mlirGen.h"
-#include "NyaZyOps.h"
+#include "ir/NyaZyOps.h"
 #include "ast.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Builders.h"

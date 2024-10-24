@@ -26,13 +26,3 @@ add_public_tablegen_target(MLIRNyaZyOpsIncGen)
 # set(LLVM_TARGET_DEFINITIONS NyaZyPasses.td)
 # mlir_tablegen(NyaZyPasses.h.inc --gen-pass-decls)
 # add_public_tablegen_target(MLIRNyaZyPassesIncGen)
-
-target_sources(NyaZyDialect PRIVATE
-    NyaZyDialect.cpp
-)
-
-target_link_libraries(NyaZyDialect
-    MLIRIR
-    MLIRSupport
-    MLIRDialect
-)

@@ -37,14 +37,12 @@ target_compile_options(nyacc PRIVATE -Wall -Wextra -Werror -fno-rtti)
 target_compile_options(NyaZyDialect PRIVATE -Wall -Wextra -Werror -fno-rtti)
 
 
-include_directories(mlir)
+include_directories(include)
+add_subdirectory(include)
 include_directories(${CMAKE_BINARY_DIR}/mlir)
-
-add_subdirectory(mlir)
 
 add_dependencies(nyacc MLIRNyaZyOpsIncGen)
 add_dependencies(nyacc MLIRNyaZyDialectIncGen)
 
-# Add subdirectories for src and test
 add_subdirectory(src)
 # add_subdirectory(test)
