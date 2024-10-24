@@ -11,9 +11,8 @@ include "mlir/IR/BuiltinAttributeInterfaces.td"
 // Almost taken from `arith.constant`
 def ConstantOp : NyaZyOp<"constant", 
     [ConstantLike, Pure,
-     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
      AllTypesMatch<["value", "result"]>,
-     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]> {
+     ]> {
     let summary = "integer or floating point constant operation";
     let description = [{
         Constant operation turns a literal into an SSA value. The data is attached

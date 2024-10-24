@@ -8,16 +8,16 @@ message(STATUS "Configuring MLIR TableGen for NyaZyDialect")
 set(LLVM_TARGET_DEFINITIONS NyaZyDialect.td)
 mlir_tablegen(NyaZyDialect.h.inc -gen-dialect-decls)
 mlir_tablegen(NyaZyDialect.cpp.inc -gen-dialect-defs)
-mlir_tablegen(NyaZyDialectDialect.h.inc -gen-dialect-decls -dialect=nyazy)
-mlir_tablegen(NyaZyDialectDialect.cpp.inc -gen-dialect-defs -dialect=nyazy)
+# mlir_tablegen(NyaZyDialectDialect.h.inc -gen-dialect-decls -dialect=nyazy)
+# mlir_tablegen(NyaZyDialectDialect.cpp.inc -gen-dialect-defs -dialect=nyazy)
 add_public_tablegen_target(MLIRNyaZyDialectIncGen)
 
 message(STATUS "Configuring MLIR TableGen for NyaZyOps")
 set(LLVM_TARGET_DEFINITIONS NyaZyOps.td)
 mlir_tablegen(NyaZyOps.h.inc -gen-op-decls)
 mlir_tablegen(NyaZyOps.cpp.inc -gen-op-defs)
-mlir_tablegen(NyaZyOpsDialect.h.inc -gen-op-decls -dialect=nyazy)
-mlir_tablegen(NyaZyOpsDialect.cpp.inc -gen-op-defs -dialect=nyazy)
+# mlir_tablegen(NyaZyOpsDialect.h.inc -gen-op-decls -dialect=nyazy)
+# mlir_tablegen(NyaZyOpsDialect.cpp.inc -gen-op-defs -dialect=nyazy)
 add_public_tablegen_target(MLIRNyaZyOpsIncGen)
 
 # add_mlir_doc(NyaZyDialect NyaZyDialect ./ -gen-dialect-doc)
@@ -26,3 +26,13 @@ add_public_tablegen_target(MLIRNyaZyOpsIncGen)
 # set(LLVM_TARGET_DEFINITIONS NyaZyPasses.td)
 # mlir_tablegen(NyaZyPasses.h.inc --gen-pass-decls)
 # add_public_tablegen_target(MLIRNyaZyPassesIncGen)
+
+target_sources(NyaZyDialect PRIVATE
+    NyaZyDialect.cpp
+)
+
+target_link_libraries(NyaZyDialect
+    MLIRIR
+    MLIRSupport
+    MLIRDialect
+)

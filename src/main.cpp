@@ -14,6 +14,7 @@
 #include <mlir/Target/LLVMIR/Export.h>
 
 #include "lexer.h"
+#include "mlirGen.h"
 #include "parser.h"
 #include "ast.h"
 
@@ -87,6 +88,11 @@ int main() {
     nyacc::Parser parser{tokens};
     auto moduleAst = parser.parseModule();
     moduleAst.dump();
+
+    mlir::MLIRContext context1;
+    context1.getOrLoadDialect<nyacc::NyaZyDialect>();
+    auto module1 = nyacc::MLIRGen::gen(context1, moduleAst);
+    module1->dump();
 
     // Initialize MLIR context
     mlir::MLIRContext context;

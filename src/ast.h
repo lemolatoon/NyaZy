@@ -7,8 +7,8 @@ namespace nyacc {
     class Visitor {
         public:
             virtual ~Visitor() = default;
-            virtual void visit(class ModuleAST &node) = 0;
-            virtual void visit(class NumLitExpr &node) = 0;
+            virtual void visit(const class ModuleAST &node) = 0;
+            virtual void visit(const class NumLitExpr &node) = 0;
     };
 
 
@@ -51,10 +51,13 @@ namespace nyacc {
     class ModuleAST {
         public:
             ModuleAST(std::unique_ptr<ExprASTNode> expr) : expr_(std::move(expr)) {}
-            void accept(Visitor &v) {
+            void accept(Visitor &v) const {
                 v.visit(*this);
             };
             void dump(int level = 0) const;
+            const std::unique_ptr<ExprASTNode>& getExpr() const {
+                return expr_;
+            }
         private:
             std::unique_ptr<ExprASTNode> expr_;
     };
