@@ -35,7 +35,7 @@ int main() {
 )";
   llvm::outs() << "Source code:\n";
   llvm::outs() << src;
-  nyacc::Lexer lexer("10-2+4+5-1");
+  nyacc::Lexer lexer(src);
   llvm::outs() << "Tokens:\n";
   const auto tokens = lexer.tokenize();
   for (const auto &token : tokens) {

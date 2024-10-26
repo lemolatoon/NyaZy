@@ -30,6 +30,11 @@ std::vector<Token> Lexer::tokenize() {
       continue;
     }
 
+    if (input_[pos_] == ' ' || input_[pos_] == '\n') {
+      pos_++;
+      continue;
+    }
+
     // tokenize plus
     if (input_[pos_] == '+') {
       tokens.emplace_back(Token::TokenKind::Plus, "+");
