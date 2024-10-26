@@ -1,9 +1,11 @@
 #include "mlirGen.h"
+#include "ir/NyaZyDialect.h"
 #include "ir/NyaZyOps.h"
 #include "ast.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
+#include <mlir/Dialect/Func/IR/FuncOps.h>
 
 namespace {
 
@@ -19,7 +21,13 @@ public:
     }
     
     void visit(const nyacc::ModuleAST &moduleAst) override {
+        auto mainOp = builder_.create<nyacc::FuncOp>(builder_.getUnknownLoc(), "main", builder_.getFunctionType({}, {}));
+
+        builder_.setInsertionPointToStart(&mainOp.front());
+        
+        builder_.setInsertionPointToStart(&mainOp.front());
         moduleAst.getExpr()->accept(*this);
+        builder_.create<nyacc::ReturnOp>(builder_.getUnknownLoc(), value_.value());
     }
 
     void visit(const nyacc::NumLitExpr &numLit) override {

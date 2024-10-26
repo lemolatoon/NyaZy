@@ -3,4 +3,4 @@
 #include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/IR/Dialect.h"
 
-#include "NyaZyDialect.h.inc"
+#include "ir/NyaZyDialect.h.inc"

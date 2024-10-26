@@ -39,7 +39,7 @@ target_compile_options(NyaZyDialect PRIVATE -Wall -Wextra -Werror -fno-rtti)
 
 include_directories(include)
 add_subdirectory(include)
-include_directories(${CMAKE_BINARY_DIR}/mlir)
+include_directories(${CMAKE_BINARY_DIR}/include)
 
 add_dependencies(nyacc MLIRNyaZyOpsIncGen)
 add_dependencies(nyacc MLIRNyaZyDialectIncGen)
