@@ -17,6 +17,7 @@ COMMAND_MAP = {
     "configure": "scripts/configure.sh",
     "build": f"ninja -j{os.cpu_count()} -C build",
     "nyacc": "build/nyacc",
+    "test": "ctest --test-dir build/test --output-on-failure",
     "lli": os.path.join(llvm_bin_dir, "lli"),
     "clang-format": f"{clang_format_path}",
     "fmt": f"{clang_format_path} -i **/*.cpp **/*.h",
