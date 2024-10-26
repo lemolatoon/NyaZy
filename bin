@@ -9,13 +9,17 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 llvm_install_dir = "thirdparty/build/llvm/install"
 llvm_bin_dir = os.path.join(llvm_install_dir, "bin")
+# clang_format_path = os.path.join(llvm_bin_dir, "clang-format")
+clang_format_path = "clang-format"
 
 COMMAND_MAP = {
     "thirdparty": "scripts/thirdparty.sh",
     "configure": "scripts/configure.sh",
     "build": f"ninja -j{os.cpu_count()} -C build",
     "nyacc": "build/nyacc",
-    "lli": os.path.join(llvm_bin_dir, "lli")
+    "lli": os.path.join(llvm_bin_dir, "lli"),
+    "clang-format": f"{clang_format_path}",
+    "fmt": f"{clang_format_path} -i **/*.cpp **/*.h",
 }
 
 def show_help():
