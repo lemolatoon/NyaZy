@@ -12,19 +12,23 @@ ModuleAST Parser::parseModule() {
 }
 
 // "1+1", "1"をparse
+// "1+2+3"をparse
 std::unique_ptr<ExprASTNode> Parser::parseExpr() {
   std::unique_ptr<ExprASTNode> node = parsePrimary();
 
-  const auto &token = tokens_[pos_];
-  switch (token.getKind()) {
-  case Token::TokenKind::Plus: {
-    pos_++;
-    auto rhs = parsePrimary();
-    return std::make_unique<BinaryExpr>(std::move(node), std::move(rhs),
-                                        BinaryOp::Add);
-  }
-  default:
-    return node;
+  while (true) {
+    const auto &token = tokens_[pos_];
+    switch (token.getKind()) {
+    case Token::TokenKind::Plus: {
+      pos_++;
+      auto rhs = parsePrimary();
+      node = std::make_unique<BinaryExpr>(std::move(node), std::move(rhs),
+                                          BinaryOp::Add);
+      continue;
+    }
+    default:
+      return node;
+    }
   }
 }
 
