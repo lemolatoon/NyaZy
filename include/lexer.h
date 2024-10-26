@@ -8,12 +8,30 @@ class Token {
 public:
   enum class TokenKind {
     NumLit,
+    Plus,
+    Minus,
+    Star,
+    Slash,
+    OpenParen,
+    CloseParen,
     Eof,
   };
   static const char *tokenKindToString(TokenKind kind) {
     switch (kind) {
     case TokenKind::NumLit:
       return "NumLit";
+    case TokenKind::Plus:
+      return "Plus";
+    case TokenKind::Minus:
+      return "Minus";
+    case TokenKind::Star:
+      return "Star";
+    case TokenKind::Slash:
+      return "Slash";
+    case TokenKind::OpenParen:
+      return "OpenParen";
+    case TokenKind::CloseParen:
+      return "CloseParen";
     case TokenKind::Eof:
       return "Eof";
     }
