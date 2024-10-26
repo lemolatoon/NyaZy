@@ -1,6 +1,12 @@
 #include "lexer.h"
+#include <__expected/expected.h>
 #include <cctype>
+#include <error.h>
+#include <expected>
+#include <fmt/core.h>
 #include <iostream>
+#include <sstream>
+#include <string>
 
 namespace nyacc {
 
@@ -24,7 +30,7 @@ void Lexer::nextLine() {
   currentLocation_.line++;
   currentLocation_.col = 0;
 }
-std::vector<Token> Lexer::tokenize() {
+std::expected<std::vector<Token>, ErrorInfo> Lexer::tokenize() {
   std::vector<Token> tokens;
 
   while (!atEof()) {
@@ -63,13 +69,25 @@ std::vector<Token> Lexer::tokenize() {
         {')', Token::TokenKind::CloseParen},
     };
 
+    bool shouldContinue = false;
     for (const auto &[c, kind] : token_mapping) {
       if (input_[pos_] == c) {
         tokens.emplace_back(kind, input_.substr(pos_, 1), currentLocation());
         advance();
+        shouldContinue = true;
         break;
       }
     }
+    if (shouldContinue) {
+      continue;
+    }
+
+    std::string error_msg;
+    std::ostringstream oss;
+    oss << "Unexpected character: " << input_[pos_];
+    error_msg = oss.str();
+    ErrorInfo info{.message = error_msg, .location = currentLocation()};
+    return std::unexpected{info};
   }
 
   return tokens;

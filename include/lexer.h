@@ -1,18 +1,13 @@
 #pragma once
 
+#include "error.h"
 #include <cassert>
+#include <expected>
 #include <memory>
 #include <string_view>
 #include <vector>
 
 namespace nyacc {
-
-/// Structure definition a location in a file.
-struct Location {
-  std::shared_ptr<std::string> file; ///< filename.
-  int line;                          ///< line number.
-  int col;                           ///< column number.
-};
 
 class Token {
 public:
@@ -67,7 +62,10 @@ public:
       : input_(input), pos_(0),
         currentLocation_(Location{.file = filename, .line = 0, .col = 0}) {}
 
-  std::vector<Token> tokenize();
+  std::expected<std::vector<Token>, ErrorInfo> tokenize();
+  const Location &currentLocation() const { return currentLocation_; }
+
+private:
   std::string_view head();
 
   void advanceN(size_t n);
@@ -78,9 +76,6 @@ public:
 
   void nextLine();
 
-  const Location &currentLocation() const { return currentLocation_; }
-
-private:
   std::string_view input_;
   size_t pos_;
 
