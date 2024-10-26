@@ -20,7 +20,7 @@ ExternalProject_Add(
     SOURCE_SUBDIR llvm
     UPDATE_COMMAND ""
     CMAKE_ARGS
-        -DLLVM_ENABLE_PROJECTS=mlir
+        -DLLVM_ENABLE_PROJECTS=mlir;clang;clang-tools-extra
         -DLLVM_BUILD_EXAMPLES=ON
         -DLLVM_TARGETS_TO_BUILD=Native;NVPTX;AMDGPU
         -DCMAKE_BUILD_TYPE=Release

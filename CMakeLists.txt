@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
+cmake_policy(SET CMP0116 NEW)
 project(nyazy LANGUAGES CXX C)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -31,8 +32,17 @@ link_directories(${LLVM_BUILD_LIBRARY_DIR})
 # ---------------------------
 
 add_executable(nyacc)
+add_library(NyaZyDialect)
 target_compile_options(nyacc PRIVATE -Wall -Wextra -Werror -fno-rtti)
+target_compile_options(NyaZyDialect PRIVATE -Wall -Wextra -Werror -fno-rtti)
 
-# Add subdirectories for src and test
+
+include_directories(include)
+add_subdirectory(include)
+include_directories(${CMAKE_BINARY_DIR}/include)
+
+add_dependencies(nyacc MLIRNyaZyOpsIncGen)
+add_dependencies(nyacc MLIRNyaZyDialectIncGen)
+
 add_subdirectory(src)
 # add_subdirectory(test)
