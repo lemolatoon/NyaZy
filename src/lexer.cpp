@@ -48,6 +48,20 @@ std::vector<Token> Lexer::tokenize() {
       pos_++;
       continue;
     }
+
+    // tokenize mul
+    if (input_[pos_] == '*') {
+      tokens.emplace_back(Token::TokenKind::Star, "*");
+      pos_++;
+      continue;
+    }
+
+    // tokenize slash
+    if (input_[pos_] == '/') {
+      tokens.emplace_back(Token::TokenKind::Slash, "/");
+      pos_++;
+      continue;
+    }
   }
 
   return tokens;

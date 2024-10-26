@@ -10,6 +10,8 @@ public:
     NumLit,
     Plus,
     Minus,
+    Star,
+    Slash,
     Eof,
   };
   static const char *tokenKindToString(TokenKind kind) {
@@ -20,6 +22,10 @@ public:
       return "Plus";
     case TokenKind::Minus:
       return "Minus";
+    case TokenKind::Star:
+      return "Star";
+    case TokenKind::Slash:
+      return "Slash";
     case TokenKind::Eof:
       return "Eof";
     }

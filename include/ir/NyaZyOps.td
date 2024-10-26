@@ -72,6 +72,34 @@ def SubOp : NyaZyOp<"sub",
 }
 
 //===----------------------------------------------------------------------===//
+// MulOp
+//===----------------------------------------------------------------------===//
+def MulOp : NyaZyOp<"mul",
+    [Pure]> {
+  let summary = "multiplication operation";
+  let description = [{
+    The "nyazy.mul" operation represents the multiplication of two values.
+  }];
+
+  let arguments = (ins I64:$lhs, I64:$rhs);
+  let results = (outs I64);
+}
+
+//===----------------------------------------------------------------------===//
+// DivOp
+//===----------------------------------------------------------------------===//
+def DivOp : NyaZyOp<"div",
+    [Pure]> {
+  let summary = "divide operation";
+  let description = [{
+    The "nyazy.div" operation represents the divide of two values.
+  }];
+
+  let arguments = (ins I64:$lhs, I64:$rhs);
+  let results = (outs I64);
+}
+
+//===----------------------------------------------------------------------===//
 // FuncOp
 //===----------------------------------------------------------------------===//
 def FuncOp : NyaZyOp<"func", [

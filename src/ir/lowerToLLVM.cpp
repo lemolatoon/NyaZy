@@ -76,6 +76,8 @@ struct BinaryOpLowering : public mlir::OpConversionPattern<BinaryOp> {
 };
 using AddOpLowering = BinaryOpLowering<nyacc::AddOp, mlir::arith::AddIOp>;
 using SubOpLowering = BinaryOpLowering<nyacc::SubOp, mlir::arith::SubIOp>;
+using MulOpLowering = BinaryOpLowering<nyacc::MulOp, mlir::arith::MulIOp>;
+using DivOpLowering = BinaryOpLowering<nyacc::DivOp, mlir::arith::DivSIOp>;
 
 class ReturnOpLowering : public mlir::OpRewritePattern<nyacc::ReturnOp> {
 public:
@@ -145,7 +147,8 @@ void NyaZyToLLVMPass::runOnOperation() {
   mlir::RewritePatternSet patterns(&getContext());
   // nyazy -> arith + func
   patterns.add<ConstantOpLowering, FuncOpLowering, ReturnOpLowering,
-               AddOpLowering, SubOpLowering>(&getContext());
+               AddOpLowering, SubOpLowering, MulOpLowering, DivOpLowering>(
+      &getContext());
 
   // * -> llvm
   mlir::LLVMTypeConverter typeConverter(&getContext());

@@ -57,6 +57,16 @@ public:
           builder_.create<nyacc::SubOp>(builder_.getUnknownLoc(), lhs, rhs);
       break;
     }
+    case nyacc::BinaryOp::Mul: {
+      value_ =
+          builder_.create<nyacc::MulOp>(builder_.getUnknownLoc(), lhs, rhs);
+      break;
+    }
+    case nyacc::BinaryOp::Div: {
+      value_ =
+          builder_.create<nyacc::DivOp>(builder_.getUnknownLoc(), lhs, rhs);
+      break;
+    }
     }
   }
 

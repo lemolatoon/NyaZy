@@ -48,6 +48,8 @@ private:
 enum class BinaryOp {
   Add,
   Sub,
+  Mul,
+  Div,
 };
 
 static inline const char *BinaryOpToStr(BinaryOp op) {
@@ -56,6 +58,11 @@ static inline const char *BinaryOpToStr(BinaryOp op) {
     return "+";
   case BinaryOp::Sub:
     return "-";
+  case BinaryOp::Mul:
+    return "*";
+  case BinaryOp::Div:
+    return "/";
+    break;
   }
 }
 
