@@ -26,6 +26,10 @@ std::unique_ptr<ExprASTNode> Parser::parseExpr() {
       std::abort();
     }
   }
+  case Token::TokenKind::Plus:
+    std::cerr << "Unexpected token: " << token << "\n";
+    std::abort();
+    break;
   case Token::TokenKind::Eof:
     std::cerr << "Unexpected token: " << token << "\n";
     std::abort();
