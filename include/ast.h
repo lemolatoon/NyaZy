@@ -9,12 +9,14 @@ public:
   virtual ~Visitor() = default;
   virtual void visit(const class ModuleAST &node) = 0;
   virtual void visit(const class NumLitExpr &node) = 0;
+  virtual void visit(const class BinaryExpr &node) = 0;
 };
 
 class ExprASTNode {
 public:
   enum class ExprKind {
     NumLit,
+    Binary,
   };
   explicit ExprASTNode(ExprKind kind) : kind_(kind) {}
   virtual ~ExprASTNode() = default;
@@ -41,6 +43,32 @@ public:
 
 private:
   int64_t value_;
+};
+
+enum class BinaryOp {
+  Add,
+};
+
+class BinaryExpr : public ExprASTNode {
+public:
+  BinaryExpr(std::unique_ptr<ExprASTNode> lhs, std::unique_ptr<ExprASTNode> rhs,
+             BinaryOp op)
+      : ExprASTNode(ExprKind::Binary), lhs_(std::move(lhs)),
+        rhs_(std::move(rhs)), op_(op) {}
+  void accept(Visitor &v) override { v.visit(*this); }
+
+  static bool classof(const ExprASTNode *node) {
+    return node->getKind() == ExprKind::Binary;
+  }
+
+  void dump(int level) const override;
+  const std::unique_ptr<ExprASTNode> &getLhs() const { return lhs_; }
+  const std::unique_ptr<ExprASTNode> &getRhs() const { return rhs_; }
+
+private:
+  std::unique_ptr<ExprASTNode> lhs_;
+  std::unique_ptr<ExprASTNode> rhs_;
+  BinaryOp op_ [[maybe_unused]];
 };
 
 class ModuleAST {

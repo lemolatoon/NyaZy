@@ -8,6 +8,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Verifier.h"
 #include <iostream>
+#include <llvm/Support/FileSystem.h>
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Support/raw_ostream.h>
 #include <mlir/Dialect/Arith/IR/Arith.h>
@@ -85,6 +86,18 @@ int main() {
     llvm::errs() << "Failed to emit LLVM IR\n";
     return 1;
   }
+
+  // ファイルに書き出す
+  std::error_code EC;
+  llvm::raw_fd_ostream outputFile("output.ll", EC,
+                                  llvm::sys::fs::OpenFlags::OF_None);
+
+  if (EC) {
+    llvm::errs() << "Could not open file: " << EC.message() << "\n";
+    return 1;
+  }
+  llvmModule->print(outputFile, nullptr);
+
   llvm::outs() << "Generated LLVM IR:\n";
   llvmModule->print(llvm::outs(), nullptr);
 

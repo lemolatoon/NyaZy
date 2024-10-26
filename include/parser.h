@@ -12,6 +12,7 @@ public:
 
 private:
   std::unique_ptr<ExprASTNode> parseExpr();
+  std::unique_ptr<ExprASTNode> parsePrimary();
   std::vector<Token> tokens_;
   size_t pos_{0};
 };

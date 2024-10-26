@@ -12,6 +12,10 @@ include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
 
 // Almost taken from `arith.constant`
+
+//===----------------------------------------------------------------------===//
+// ConstanOp
+//===----------------------------------------------------------------------===//
 def ConstantOp : NyaZyOp<"constant", 
     [Pure,
      AllTypesMatch<["value", "result"]>,
@@ -36,6 +40,26 @@ def ConstantOp : NyaZyOp<"constant",
     let assemblyFormat = "attr-dict $value";
 }
 
+//===----------------------------------------------------------------------===//
+// AddOp
+// reference: thirdparty/build/llvm/src/llvm_project/mlir/examples/toy/Ch7/include/toy/Ops.td
+//===----------------------------------------------------------------------===//
+def AddOp : NyaZyOp<"add",
+    [Pure]> {
+  let summary = "addition operation";
+  let description = [{
+    The "nyazy.add" operation represents the addition of two values.
+  }];
+
+  let arguments = (ins I64:$lhs, I64:$rhs);
+  let results = (outs I64);
+
+  // Allow building an AddOp with from the two input operands.
+}
+
+//===----------------------------------------------------------------------===//
+// FuncOp
+//===----------------------------------------------------------------------===//
 def FuncOp : NyaZyOp<"func", [
     FunctionOpInterface,
     IsolatedFromAbove,

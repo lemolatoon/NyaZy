@@ -5,6 +5,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
+#include <iostream>
 #include <mlir/Dialect/Func/IR/FuncOps.h>
 
 namespace {
@@ -35,6 +36,16 @@ public:
     value_ = builder_.create<nyacc::ConstantOp>(
         builder_.getUnknownLoc(),
         builder_.getI64IntegerAttr(numLit.getValue()));
+  }
+
+  // TODO
+  void visit(const nyacc::BinaryExpr &binaryExpr [[maybe_unused]]) override {
+    binaryExpr.getLhs()->accept(*this);
+    auto lhs = value_.value();
+    binaryExpr.getRhs()->accept(*this);
+    auto rhs = value_.value();
+    // 今はAddOpのみ
+    value_ = builder_.create<nyacc::AddOp>(builder_.getUnknownLoc(), lhs, rhs);
   }
 
 private:
