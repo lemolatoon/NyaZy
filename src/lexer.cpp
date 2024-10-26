@@ -62,6 +62,19 @@ std::vector<Token> Lexer::tokenize() {
       pos_++;
       continue;
     }
+
+    // tokenize (
+    if (input_[pos_] == '(') {
+      tokens.emplace_back(Token::TokenKind::OpenParen, "(");
+      pos_++;
+      continue;
+    }
+    // tokenize (
+    if (input_[pos_] == ')') {
+      tokens.emplace_back(Token::TokenKind::CloseParen, ")");
+      pos_++;
+      continue;
+    }
   }
 
   return tokens;

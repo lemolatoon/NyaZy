@@ -12,6 +12,8 @@ public:
     Minus,
     Star,
     Slash,
+    OpenParen,
+    CloseParen,
     Eof,
   };
   static const char *tokenKindToString(TokenKind kind) {
@@ -26,6 +28,10 @@ public:
       return "Star";
     case TokenKind::Slash:
       return "Slash";
+    case TokenKind::OpenParen:
+      return "OpenParen";
+    case TokenKind::CloseParen:
+      return "CloseParen";
     case TokenKind::Eof:
       return "Eof";
     }

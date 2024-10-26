@@ -70,6 +70,16 @@ std::unique_ptr<ExprASTNode> Parser::parsePrimary() {
       std::abort();
     }
   }
+  case Token::TokenKind::OpenParen: {
+    pos_++;
+    auto expr = parseExpr();
+    if (tokens_[pos_].getKind() != Token::TokenKind::CloseParen) {
+      std::cerr << "Expected ')'\n";
+      std::abort();
+    }
+    pos_++;
+    return expr;
+  }
   default:
     std::cerr << "Unexpected token: " << token << "\n";
     std::abort();

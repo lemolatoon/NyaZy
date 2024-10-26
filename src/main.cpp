@@ -31,7 +31,7 @@
 
 int main() {
   std::string src = R"(
-2+4*3+4/2
+2+4*(2+1)
 )";
   llvm::outs() << "Source code:\n";
   llvm::outs() << src;
