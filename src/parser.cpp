@@ -19,11 +19,13 @@ std::unique_ptr<ExprASTNode> Parser::parseExpr() {
   while (true) {
     const auto &token = tokens_[pos_];
     switch (token.getKind()) {
-    case Token::TokenKind::Plus: {
+    case Token::TokenKind::Plus:
+    case Token::TokenKind::Minus: {
       pos_++;
       auto rhs = parsePrimary();
-      node = std::make_unique<BinaryExpr>(std::move(node), std::move(rhs),
-                                          BinaryOp::Add);
+      BinaryOp op = token.getKind() == Token::TokenKind::Plus ? BinaryOp::Add
+                                                              : BinaryOp::Sub;
+      node = std::make_unique<BinaryExpr>(std::move(node), std::move(rhs), op);
       continue;
     }
     default:

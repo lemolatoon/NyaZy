@@ -47,7 +47,17 @@ private:
 
 enum class BinaryOp {
   Add,
+  Sub,
 };
+
+static inline const char *BinaryOpToStr(BinaryOp op) {
+  switch (op) {
+  case BinaryOp::Add:
+    return "+";
+  case BinaryOp::Sub:
+    return "-";
+  }
+}
 
 class BinaryExpr : public ExprASTNode {
 public:
@@ -64,11 +74,12 @@ public:
   void dump(int level) const override;
   const std::unique_ptr<ExprASTNode> &getLhs() const { return lhs_; }
   const std::unique_ptr<ExprASTNode> &getRhs() const { return rhs_; }
+  const BinaryOp &getOp() const { return op_; }
 
 private:
   std::unique_ptr<ExprASTNode> lhs_;
   std::unique_ptr<ExprASTNode> rhs_;
-  BinaryOp op_ [[maybe_unused]];
+  BinaryOp op_;
 };
 
 class ModuleAST {

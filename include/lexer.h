@@ -9,6 +9,7 @@ public:
   enum class TokenKind {
     NumLit,
     Plus,
+    Minus,
     Eof,
   };
   static const char *tokenKindToString(TokenKind kind) {
@@ -17,6 +18,8 @@ public:
       return "NumLit";
     case TokenKind::Plus:
       return "Plus";
+    case TokenKind::Minus:
+      return "Minus";
     case TokenKind::Eof:
       return "Eof";
     }

@@ -39,13 +39,25 @@ public:
   }
 
   // TODO
-  void visit(const nyacc::BinaryExpr &binaryExpr [[maybe_unused]]) override {
+  void visit(const nyacc::BinaryExpr &binaryExpr) override {
     binaryExpr.getLhs()->accept(*this);
     auto lhs = value_.value();
     binaryExpr.getRhs()->accept(*this);
     auto rhs = value_.value();
     // 今はAddOpのみ
-    value_ = builder_.create<nyacc::AddOp>(builder_.getUnknownLoc(), lhs, rhs);
+
+    switch (binaryExpr.getOp()) {
+    case nyacc::BinaryOp::Add: {
+      value_ =
+          builder_.create<nyacc::AddOp>(builder_.getUnknownLoc(), lhs, rhs);
+      break;
+    }
+    case nyacc::BinaryOp::Sub: {
+      value_ =
+          builder_.create<nyacc::SubOp>(builder_.getUnknownLoc(), lhs, rhs);
+      break;
+    }
+    }
   }
 
 private:

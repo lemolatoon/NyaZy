@@ -58,6 +58,20 @@ def AddOp : NyaZyOp<"add",
 }
 
 //===----------------------------------------------------------------------===//
+// SubOp
+//===----------------------------------------------------------------------===//
+def SubOp : NyaZyOp<"sub",
+    [Pure]> {
+  let summary = "subtraction operation";
+  let description = [{
+    The "nyazy.sub" operation represents the subtraction of two values.
+  }];
+
+  let arguments = (ins I64:$lhs, I64:$rhs);
+  let results = (outs I64);
+}
+
+//===----------------------------------------------------------------------===//
 // FuncOp
 //===----------------------------------------------------------------------===//
 def FuncOp : NyaZyOp<"func", [

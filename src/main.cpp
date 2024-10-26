@@ -31,11 +31,11 @@
 
 int main() {
   std::string src = R"(
-1+10+3
+10-2+4+5-1
 )";
   llvm::outs() << "Source code:\n";
   llvm::outs() << src;
-  nyacc::Lexer lexer("1+10+3");
+  nyacc::Lexer lexer("10-2+4+5-1");
   llvm::outs() << "Tokens:\n";
   const auto tokens = lexer.tokenize();
   for (const auto &token : tokens) {
