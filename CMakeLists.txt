@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
 cmake_policy(SET CMP0116 NEW)
+cmake_policy(SET CMP0135 NEW)
 project(nyazy LANGUAGES CXX C)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -32,8 +33,12 @@ link_directories(${LLVM_BUILD_LIBRARY_DIR})
 # ---------------------------
 
 add_executable(nyacc)
+add_library(libNYACC)
 add_library(NyaZyDialect)
+add_executable(simpleTest)
 target_compile_options(nyacc PRIVATE -Wall -Wextra -Werror -fno-rtti)
+target_compile_options(libNYACC PRIVATE -Wall -Wextra -Werror -fno-rtti)
+target_compile_options(simpleTest PRIVATE -Wall -Wextra -Werror -fno-rtti)
 target_compile_options(NyaZyDialect PRIVATE -Wall -Wextra -Werror -fno-rtti)
 
 
@@ -41,8 +46,23 @@ include_directories(include)
 add_subdirectory(include)
 include_directories(${CMAKE_BINARY_DIR}/include)
 
+add_dependencies(libNYACC MLIRNyaZyDialectIncGen)
+add_dependencies(libNYACC MLIRNyaZyDialectIncGen)
+
 add_dependencies(nyacc MLIRNyaZyOpsIncGen)
 add_dependencies(nyacc MLIRNyaZyDialectIncGen)
 
+add_dependencies(simpleTest MLIRNyaZyOpsIncGen)
+add_dependencies(simpleTest MLIRNyaZyDialectIncGen)
+
+include(FetchContent)
+FetchContent_Declare(
+  googletest
+  URL https://github.com/google/googletest/archive/refs/tags/release-1.12.1.zip
+)
+
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(googletest)
+
 add_subdirectory(src)
-# add_subdirectory(test)
+add_subdirectory(test)
