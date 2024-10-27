@@ -1,9 +1,7 @@
 #include "lexer.h"
-#include <__expected/expected.h>
 #include <cctype>
 #include <error.h>
 #include <expected>
-#include <fmt/core.h>
 #include <iostream>
 #include <sstream>
 #include <string>
