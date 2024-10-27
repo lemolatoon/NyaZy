@@ -1,9 +1,14 @@
 #pragma once
 
+#include "error.h"
+#include <cassert>
+#include <expected>
+#include <memory>
 #include <string_view>
 #include <vector>
 
 namespace nyacc {
+
 class Token {
 public:
   enum class TokenKind {
@@ -36,7 +41,8 @@ public:
       return "Eof";
     }
   }
-  Token(TokenKind kind, std::string_view text) : kind_(kind), text_(text) {}
+  Token(TokenKind kind, std::string_view text, Location loc)
+      : kind_(kind), text_(text), loc_(loc) {}
   TokenKind getKind() const { return kind_; }
   std::string_view text() const { return text_; }
 
@@ -45,17 +51,34 @@ public:
 private:
   TokenKind kind_;
   std::string_view text_;
+  Location loc_;
 };
 
 class Lexer {
 public:
-  Lexer(std::string_view input) : input_(input), pos_(0) {}
+  Lexer(std::string_view input)
+      : Lexer(input, std::make_shared<std::string>("unkown-file")) {}
+  Lexer(std::string_view input, std::shared_ptr<std::string> filename)
+      : input_(input), pos_(0),
+        currentLocation_(Location{.file = filename, .line = 0, .col = 0}) {}
 
-  std::vector<Token> tokenize();
-  std::string_view head();
+  std::expected<std::vector<Token>, ErrorInfo> tokenize();
+  const Location &currentLocation() const { return currentLocation_; }
 
 private:
+  std::string_view head();
+
+  void advanceN(size_t n);
+
+  void advance();
+
+  bool atEof() const;
+
+  void nextLine();
+
   std::string_view input_;
   size_t pos_;
+
+  Location currentLocation_{};
 };
 } // namespace nyacc

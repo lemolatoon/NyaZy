@@ -62,7 +62,10 @@ int runIR(std::unique_ptr<llvm::Module> &module) {
 int runNyaZy(std::string src) {
   nyacc::Lexer lexer(src);
   auto tokens = lexer.tokenize();
-  nyacc::Parser parser(tokens);
+
+  EXPECT_TRUE(tokens) << "Error: " << tokens.error().error(src) << "\n";
+
+  nyacc::Parser parser(*tokens);
   auto ast = parser.parseModule();
 
   mlir::MLIRContext context;
@@ -96,6 +99,7 @@ int runNyaZy(std::string src) {
 TEST(SimpleTest, OneInteger) { EXPECT_EQ(123, runNyaZy("123")); }
 
 TEST(SimpleTest, ArithOps) {
+  EXPECT_EQ(3, runNyaZy("1&2"));
   EXPECT_EQ(3, runNyaZy("1+2"));
   EXPECT_EQ(8, runNyaZy("1+2+5"));
   EXPECT_EQ(4, runNyaZy("1*2+5/2"));

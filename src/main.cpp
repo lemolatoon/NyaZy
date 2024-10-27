@@ -41,10 +41,16 @@ int main() {
   nyacc::Lexer lexer(src);
   llvm::outs() << "Tokens:\n";
   const auto tokens = lexer.tokenize();
-  for (const auto &token : tokens) {
+
+  if (!tokens) {
+    std::cout << "Error: " << tokens.error().error(src) << "\n";
+    return 1;
+  };
+
+  for (const auto &token : *tokens) {
     std::cout << token << "\n";
   }
-  nyacc::Parser parser{tokens};
+  nyacc::Parser parser{*tokens};
   auto moduleAst = parser.parseModule();
   llvm::outs() << "AST:\n";
   moduleAst.dump();
