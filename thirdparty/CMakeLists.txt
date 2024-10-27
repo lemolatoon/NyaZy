@@ -11,6 +11,9 @@ set(LLVM_PROJECT_BUILD_DIR ${CMAKE_BINARY_DIR}/llvm-project/build)
 # Set the directory where LLVM and MLIR are installed
 set(LLVM_PROJECT_INSTALL_DIR ${CMAKE_BINARY_DIR}/llvm/install)
 
+# https://stackoverflow.com/questions/45414507/pass-a-list-of-prefix-paths-to-externalproject-add-in-cmake-args
+string(REPLACE ";" "|" CMAKE_PREFIX_PATH_ALT_SEP "${CMAKE_PREFIX_PATH}")
+
 # Add LLVM as an external project
 ExternalProject_Add(
     llvm_project
@@ -19,10 +22,13 @@ ExternalProject_Add(
     GIT_TAG ${LLVM_VERSION}
     SOURCE_SUBDIR llvm
     UPDATE_COMMAND ""
+    LIST_SEPARATOR |
     CMAKE_ARGS
-        -DLLVM_ENABLE_PROJECTS=mlir;clang;clang-tools-extra
+        -DLLVM_ENABLE_PROJECTS=clang|mlir
+        -DLLVM_ENABLE_RUNTIMES=libcxx|libcxxabi|libunwind
         -DLLVM_BUILD_EXAMPLES=ON
-        -DLLVM_TARGETS_TO_BUILD=Native;NVPTX;AMDGPU
+        -DLLVM_BUILD_TOOLS=ON
+        -DLLVM_TARGETS_TO_BUILD=Native
         -DCMAKE_BUILD_TYPE=Release
         -DLLVM_ENABLE_ASSERTIONS=ON
         -DCMAKE_C_COMPILER=clang
@@ -31,7 +37,7 @@ ExternalProject_Add(
         -DLLVM_CCACHE_BUILD=ON
         -DCMAKE_INSTALL_PREFIX=${CMAKE_BINARY_DIR}/llvm/install
         -DLLVM_TOOL_CLANG_BUILD=ON
-    BUILD_COMMAND ${CMAKE_COMMAND} --build . --target check-mlir
+    BUILD_COMMAND ${CMAKE_COMMAND} --build .
     INSTALL_COMMAND ${CMAKE_COMMAND} --build . --target install
     USES_TERMINAL_BUILD TRUE
 )

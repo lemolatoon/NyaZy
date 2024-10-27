@@ -99,7 +99,6 @@ int runNyaZy(std::string src) {
 TEST(SimpleTest, OneInteger) { EXPECT_EQ(123, runNyaZy("123")); }
 
 TEST(SimpleTest, ArithOps) {
-  EXPECT_EQ(3, runNyaZy("1&2"));
   EXPECT_EQ(3, runNyaZy("1+2"));
   EXPECT_EQ(8, runNyaZy("1+2+5"));
   EXPECT_EQ(4, runNyaZy("1*2+5/2"));

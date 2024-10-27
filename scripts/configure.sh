@@ -8,4 +8,4 @@ mkdir -p ../build
 cd ../build
 
 # cmake
-cmake .. -G Ninja
+cmake .. -G Ninja "$@"

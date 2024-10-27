@@ -1,7 +1,11 @@
 cmake_minimum_required(VERSION 3.15)
 cmake_policy(SET CMP0116 NEW)
-cmake_policy(SET CMP0135 NEW)
+# cmake_policy(SET CMP0135 NEW)
 project(nyazy LANGUAGES CXX C)
+
+set(LLVM_INSTALL_DIR ${CMAKE_BINARY_DIR}/../thirdparty/build/llvm/install)
+set(LLVM_DIR ${LLVM_INSTALL_DIR}/lib/cmake/llvm)
+set(MLIR_DIR ${LLVM_INSTALL_DIR}/lib/cmake/mlir)
 
 set(CMAKE_CXX_STANDARD 23)
 
@@ -9,8 +13,6 @@ include(ExternalProject)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-set(LLVM_DIR ${CMAKE_BINARY_DIR}/../thirdparty/build/llvm/install/lib/cmake/llvm)
-set(MLIR_DIR ${CMAKE_BINARY_DIR}/../thirdparty/build/llvm/install/lib/cmake/mlir)
 
 find_package(LLVM REQUIRED CONFIG)
 find_package(MLIR REQUIRED CONFIG)
@@ -36,11 +38,21 @@ add_executable(nyacc)
 add_library(libNYACC)
 add_library(NyaZyDialect)
 add_executable(simpleTest)
-target_compile_options(nyacc PRIVATE -Wall -Wextra -Werror -fno-rtti)
-target_compile_options(libNYACC PRIVATE -Wall -Wextra -Werror -fno-rtti)
-target_compile_options(simpleTest PRIVATE -Wall -Wextra -Werror -fno-rtti)
-target_compile_options(NyaZyDialect PRIVATE -Wall -Wextra -Werror -fno-rtti)
+set(CMAKE_CXX_FLAGS "-Wall -Wextra -Werror -fno-rtti")
 
+ExternalProject_Add(
+  tl-expected
+  GIT_REPOSITORY https://github.com/TartanLlama/expected.git
+  GIT_TAG        master
+  PREFIX         ${CMAKE_BINARY_DIR}/thirdparty/tl-expected
+  CONFIGURE_COMMAND ""
+  BUILD_COMMAND ""
+  INSTALL_COMMAND ""
+  LOG_DOWNLOAD ON
+)
+
+ExternalProject_Get_Property(tl-expected source_dir)
+include_directories(${source_dir}/include)
 
 include_directories(include)
 add_subdirectory(include)

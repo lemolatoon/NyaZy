@@ -9,17 +9,17 @@ os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 llvm_install_dir = "thirdparty/build/llvm/install"
 llvm_bin_dir = os.path.join(llvm_install_dir, "bin")
-# clang_format_path = os.path.join(llvm_bin_dir, "clang-format")
-clang_format_path = "clang-format"
+clang_format_path = os.path.join(llvm_bin_dir, "clang-format")
+clang_path = os.path.abspath(os.path.join(llvm_bin_dir, "clang"))
+clang_pp_path = os.path.abspath(os.path.join(llvm_bin_dir, "clang++"))
 
 COMMAND_MAP = {
     "thirdparty": "scripts/thirdparty.sh",
-    "configure": "scripts/configure.sh",
+    "configure": f"scripts/configure.sh -DCMAKE_C_COMPILER={clang_path} -DCMAKE_CXX_COMPILER={clang_pp_path}",
     "build": f"ninja -j{os.cpu_count()} -C build",
     "nyacc": "build/nyacc",
     "test": "ctest --test-dir build/test --output-on-failure",
     "lli": os.path.join(llvm_bin_dir, "lli"),
-    "clang-format": f"{clang_format_path}",
     "fmt": f"{clang_format_path} -i **/*.cpp **/*.h",
 }
 
@@ -44,6 +44,13 @@ def main():
         command = COMMAND_MAP[command_name]
         try:
             subprocess.run([command] + args, check=True, shell=True)
+        except subprocess.CalledProcessError as e:
+            print(f"Error: Command '{command_name}' failed with exit code {e.returncode}")
+            sys.exit(e.returncode)
+    elif os.path.exists(os.path.join(llvm_bin_dir, command_name)):
+        command = os.path.join(llvm_bin_dir, command_name)
+        try:
+            subprocess.run([command] + args, check=True)
         except subprocess.CalledProcessError as e:
             print(f"Error: Command '{command_name}' failed with exit code {e.returncode}")
             sys.exit(e.returncode)
