@@ -1,7 +1,7 @@
 #include "lexer.h"
 #include <cctype>
 #include <error.h>
-#include <expected>
+#include "tl/expected.hpp"
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -28,7 +28,7 @@ void Lexer::nextLine() {
   currentLocation_.line++;
   currentLocation_.col = 0;
 }
-std::expected<std::vector<Token>, ErrorInfo> Lexer::tokenize() {
+tl::expected<std::vector<Token>, ErrorInfo> Lexer::tokenize() {
   std::vector<Token> tokens;
 
   while (!atEof()) {
@@ -85,8 +85,9 @@ std::expected<std::vector<Token>, ErrorInfo> Lexer::tokenize() {
     oss << "Unexpected character: " << input_[pos_];
     error_msg = oss.str();
     ErrorInfo info{.message = error_msg, .location = currentLocation()};
-    return std::unexpected{info};
+    return tl::unexpected{info};
   }
+  tokens.emplace_back(Token::TokenKind::Eof, "", currentLocation());
 
   return tokens;
 }

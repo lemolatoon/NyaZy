@@ -2,7 +2,7 @@
 
 #include "error.h"
 #include <cassert>
-#include <expected>
+#include "tl/expected.hpp"
 #include <memory>
 #include <string_view>
 #include <vector>
@@ -62,7 +62,7 @@ public:
       : input_(input), pos_(0),
         currentLocation_(Location{.file = filename, .line = 0, .col = 0}) {}
 
-  std::expected<std::vector<Token>, ErrorInfo> tokenize();
+  tl::expected<std::vector<Token>, ErrorInfo> tokenize();
   const Location &currentLocation() const { return currentLocation_; }
 
 private:

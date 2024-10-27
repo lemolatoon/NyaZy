@@ -38,8 +38,21 @@ add_executable(nyacc)
 add_library(libNYACC)
 add_library(NyaZyDialect)
 add_executable(simpleTest)
-set(CMAKE_CXX_FLAGS "-Wall -Wextra -Werror -fno-rtti -stdlib=libc++")
+set(CMAKE_CXX_FLAGS "-Wall -Wextra -Werror -fno-rtti")
 
+ExternalProject_Add(
+  tl-expected
+  GIT_REPOSITORY https://github.com/TartanLlama/expected.git
+  GIT_TAG        master
+  PREFIX         ${CMAKE_BINARY_DIR}/thirdparty/tl-expected
+  CONFIGURE_COMMAND ""
+  BUILD_COMMAND ""
+  INSTALL_COMMAND ""
+  LOG_DOWNLOAD ON
+)
+
+ExternalProject_Get_Property(tl-expected source_dir)
+include_directories(${source_dir}/include)
 
 include_directories(include)
 add_subdirectory(include)
