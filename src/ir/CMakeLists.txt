@@ -1,5 +1,6 @@
 target_sources(NyaZyDialect PRIVATE
     NyaZyDialect.cpp
+    NyaZyOpsEnums.cpp
     NyaZyOps.cpp
     lowerToLLVM.cpp
 )

@@ -65,6 +65,9 @@ tl::expected<std::vector<Token>, ErrorInfo> Lexer::tokenize() {
         {'/', Token::TokenKind::Slash},
         {'(', Token::TokenKind::OpenParen},
         {')', Token::TokenKind::CloseParen},
+        {'=', Token::TokenKind::Eq},
+        {'>', Token::TokenKind::Gt},
+        {'<', Token::TokenKind::Lt},
     };
 
     bool shouldContinue = false;
