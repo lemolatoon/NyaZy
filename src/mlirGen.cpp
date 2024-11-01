@@ -38,6 +38,21 @@ public:
         builder_.getI64IntegerAttr(numLit.getValue()));
   }
 
+  void visit(const nyacc::UnaryExpr &unaryExpr) override {
+    unaryExpr.getExpr()->accept(*this);
+    auto expr = value_.value();
+    switch (unaryExpr.getOp()) {
+    case nyacc::UnaryOp::Plus: {
+      value_ = builder_.create<nyacc::PosOp>(builder_.getUnknownLoc(), expr);
+      break;
+    }
+    case nyacc::UnaryOp::Minus: {
+      value_ = builder_.create<nyacc::NegOp>(builder_.getUnknownLoc(), expr);
+      break;
+    }
+    }
+  }
+
   // TODO
   void visit(const nyacc::BinaryExpr &binaryExpr) override {
     binaryExpr.getLhs()->accept(*this);

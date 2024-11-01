@@ -35,7 +35,7 @@ std::unique_ptr<ExprASTNode> Parser::parseExpr() {
 }
 
 std::unique_ptr<ExprASTNode> Parser::parseMul() {
-  std::unique_ptr<ExprASTNode> node = parsePrimary();
+  std::unique_ptr<ExprASTNode> node = parseUnary();
   while (true) {
     const auto &token = tokens_[pos_];
     switch (token.getKind()) {
@@ -53,6 +53,23 @@ std::unique_ptr<ExprASTNode> Parser::parseMul() {
     }
   }
   return node;
+}
+
+std::unique_ptr<ExprASTNode> Parser::parseUnary() {
+  const auto &token = tokens_[pos_];
+
+  switch (token.getKind()) {
+  case Token::TokenKind::Plus:
+  case Token::TokenKind::Minus: {
+    UnaryOp op = token.getKind() == Token::TokenKind::Plus ? UnaryOp::Plus
+                                                           : UnaryOp::Minus;
+    pos_++;
+    auto expr = parsePrimary();
+    return std::make_unique<UnaryExpr>(std::move(expr), op);
+  }
+  default:
+    return parsePrimary();
+  }
 }
 
 std::unique_ptr<ExprASTNode> Parser::parsePrimary() {

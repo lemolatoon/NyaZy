@@ -79,6 +79,37 @@ using SubOpLowering = BinaryOpLowering<nyacc::SubOp, mlir::arith::SubIOp>;
 using MulOpLowering = BinaryOpLowering<nyacc::MulOp, mlir::arith::MulIOp>;
 using DivOpLowering = BinaryOpLowering<nyacc::DivOp, mlir::arith::DivSIOp>;
 
+struct PosOpLowering : public mlir::OpConversionPattern<nyacc::PosOp> {
+  PosOpLowering(mlir::MLIRContext *ctx)
+      : mlir::OpConversionPattern<nyacc::PosOp>(ctx) {}
+
+  mlir::LogicalResult
+  matchAndRewrite(nyacc::PosOp op, nyacc::PosOp::Adaptor adaptor [[maybe_unused]],
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto unaryOp = mlir::cast<nyacc::PosOp>(op);
+    rewriter.replaceOp(op, unaryOp.getOperand());
+
+    return mlir::success();
+  }
+};
+
+struct NegOpLowering : public mlir::OpConversionPattern<nyacc::NegOp> {
+  NegOpLowering(mlir::MLIRContext *ctx)
+      : mlir::OpConversionPattern<nyacc::NegOp>(ctx) {}
+
+  mlir::LogicalResult
+  matchAndRewrite(nyacc::NegOp op, nyacc::NegOp::Adaptor adaptor [[maybe_unused]],
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto unaryOp = mlir::cast<nyacc::NegOp>(op);
+    auto cst0 = rewriter.create<mlir::arith::ConstantOp>(
+        op->getLoc(), rewriter.getI64Type(), rewriter.getI64IntegerAttr(0));
+    rewriter.replaceOp(op, rewriter.create<mlir::arith::SubIOp>(
+                               op->getLoc(), cst0, unaryOp.getOperand()));
+
+    return mlir::success();
+  }
+};
+
 class ReturnOpLowering : public mlir::OpRewritePattern<nyacc::ReturnOp> {
 public:
   explicit ReturnOpLowering(mlir::MLIRContext *context)
@@ -147,7 +178,7 @@ void NyaZyToLLVMPass::runOnOperation() {
   mlir::RewritePatternSet patterns(&getContext());
   // nyazy -> arith + func
   patterns.add<ConstantOpLowering, FuncOpLowering, ReturnOpLowering,
-               AddOpLowering, SubOpLowering, MulOpLowering, DivOpLowering>(
+               AddOpLowering, SubOpLowering, MulOpLowering, DivOpLowering, PosOpLowering, NegOpLowering>(
       &getContext());
 
   // * -> llvm

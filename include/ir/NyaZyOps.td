@@ -100,6 +100,34 @@ def DivOp : NyaZyOp<"div",
 }
 
 //===----------------------------------------------------------------------===//
+// PosOp
+//===----------------------------------------------------------------------===//
+def PosOp : NyaZyOp<"pos",
+    [Pure]> {
+  let summary = "unary positive operation";
+  let description = [{
+    The "nyazy.pos" operation represents the unary positive operation.
+  }];
+
+  let arguments = (ins I64:$lhs);
+  let results = (outs I64);
+}
+
+//===----------------------------------------------------------------------===//
+// NegOp
+//===----------------------------------------------------------------------===//
+def NegOp : NyaZyOp<"neg",
+    [Pure]> {
+  let summary = "unary negative operation";
+  let description = [{
+    The "nyazy.pos" operation represents the unary negative operation.
+  }];
+
+  let arguments = (ins I64:$operand);
+  let results = (outs I64);
+}
+
+//===----------------------------------------------------------------------===//
 // FuncOp
 //===----------------------------------------------------------------------===//
 def FuncOp : NyaZyOp<"func", [

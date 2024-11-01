@@ -10,12 +10,14 @@ public:
   virtual void visit(const class ModuleAST &node) = 0;
   virtual void visit(const class NumLitExpr &node) = 0;
   virtual void visit(const class BinaryExpr &node) = 0;
+  virtual void visit(const class UnaryExpr &node) = 0;
 };
 
 class ExprASTNode {
 public:
   enum class ExprKind {
     NumLit,
+    Unary,
     Binary,
   };
   explicit ExprASTNode(ExprKind kind) : kind_(kind) {}
@@ -43,6 +45,40 @@ public:
 
 private:
   int64_t value_;
+};
+
+enum class UnaryOp {
+  Plus,
+  Minus,
+};
+
+static inline const char *UnaryOpToStr(UnaryOp op) {
+  switch (op) {
+  case UnaryOp::Plus:
+    return "+";
+  case UnaryOp::Minus:
+    return "-";
+  }
+}
+
+class UnaryExpr : public ExprASTNode {
+public:
+  UnaryExpr(std::unique_ptr<ExprASTNode> expr, UnaryOp op)
+      : ExprASTNode(ExprKind::Unary), expr_(std::move(expr)), op_(op) {}
+
+  void accept(Visitor &v) override { v.visit(*this); }
+
+  void dump(int level) const override;
+  const UnaryOp &getOp() const { return op_; }
+  const std::unique_ptr<ExprASTNode> &getExpr() const { return expr_; }
+
+  static bool classof(const ExprASTNode *node) {
+    return node->getKind() == ExprKind::Unary;
+  }
+
+private:
+  std::unique_ptr<ExprASTNode> expr_;
+  UnaryOp op_;
 };
 
 enum class BinaryOp {

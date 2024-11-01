@@ -103,6 +103,8 @@ TEST(SimpleTest, ArithOps) {
   EXPECT_EQ(8, runNyaZy("1+2+5"));
   EXPECT_EQ(4, runNyaZy("1*2+5/2"));
   EXPECT_EQ(3, runNyaZy("1*(2+5)/2"));
+  EXPECT_EQ(3, runNyaZy("+2+1"));
+  EXPECT_EQ(-1, runNyaZy("-2+1"));
 }
 
 // メイン関数
