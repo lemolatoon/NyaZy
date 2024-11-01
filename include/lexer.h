@@ -1,8 +1,8 @@
 #pragma once
 
 #include "error.h"
-#include <cassert>
 #include "tl/expected.hpp"
+#include <cassert>
 #include <memory>
 #include <string_view>
 #include <vector>
