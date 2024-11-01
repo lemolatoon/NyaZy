@@ -11,6 +11,13 @@ void NumLitExpr::dump(int level) const {
   std::cout << std::string(level * 2, ' ') << "NumLitExpr(" << value_ << ")\n";
 }
 
+void UnaryExpr::dump(int level) const {
+  std::cout << std::string(level * 2, ' ') << "UnaryExpr(\n";
+  std::cout << std::string((level + 1) * 2, ' ') << UnaryOpToStr(op_) << "\n";
+  expr_->dump(level + 1);
+  std::cout << std::string(level * 2, ' ') << ")\n";
+}
+
 void BinaryExpr::dump(int level) const {
   std::cout << std::string(level * 2, ' ') << "BinaryExpr(\n";
   lhs_->dump(level + 1);
