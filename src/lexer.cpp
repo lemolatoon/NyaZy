@@ -1,7 +1,7 @@
 #include "lexer.h"
+#include "tl/expected.hpp"
 #include <cctype>
 #include <error.h>
-#include "tl/expected.hpp"
 #include <iostream>
 #include <sstream>
 #include <string>

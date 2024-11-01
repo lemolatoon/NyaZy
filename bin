@@ -15,7 +15,7 @@ clang_pp_path = os.path.abspath(os.path.join(llvm_bin_dir, "clang++"))
 
 COMMAND_MAP = {
     "thirdparty": "scripts/thirdparty.sh",
-    "configure": f"scripts/configure.sh -DCMAKE_C_COMPILER={clang_path} -DCMAKE_CXX_COMPILER={clang_pp_path}",
+    "configure": f"scripts/configure.sh",
     "build": f"ninja -j{os.cpu_count()} -C build",
     "nyacc": "build/nyacc",
     "test": "ctest --test-dir build/test --output-on-failure",
