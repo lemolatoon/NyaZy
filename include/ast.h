@@ -86,6 +86,11 @@ enum class BinaryOp {
   Sub,
   Mul,
   Div,
+  Eq,
+  Gte,
+  Gt,
+  Lte,
+  Lt,
 };
 
 static inline const char *BinaryOpToStr(BinaryOp op) {
@@ -98,7 +103,16 @@ static inline const char *BinaryOpToStr(BinaryOp op) {
     return "*";
   case BinaryOp::Div:
     return "/";
-    break;
+  case BinaryOp::Eq:
+    return "==";
+  case BinaryOp::Gte:
+    return ">=";
+  case BinaryOp::Gt:
+    return ">";
+  case BinaryOp::Lte:
+    return "<=";
+  case BinaryOp::Lt:
+    return "<";
   }
 }
 

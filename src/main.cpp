@@ -34,7 +34,7 @@
 
 int main() {
   std::string src = R"(
--2+4*(2+1)
+  123 > -2
 )";
   llvm::outs() << "Source code:\n";
   llvm::outs() << src;

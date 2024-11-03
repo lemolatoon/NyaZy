@@ -82,6 +82,36 @@ public:
           builder_.create<nyacc::DivOp>(builder_.getUnknownLoc(), lhs, rhs);
       break;
     }
+    case nyacc::BinaryOp::Eq:
+    case nyacc::BinaryOp::Gte:
+    case nyacc::BinaryOp::Gt:
+    case nyacc::BinaryOp::Lte:
+    case nyacc::BinaryOp::Lt: {
+      nyacc::CmpPredicate pred;
+      switch (binaryExpr.getOp()) {
+      case nyacc::BinaryOp::Eq:
+        pred = nyacc::CmpPredicate::eq;
+        break;
+      case nyacc::BinaryOp::Gte:
+        pred = nyacc::CmpPredicate::ge;
+        break;
+      case nyacc::BinaryOp::Gt:
+        pred = nyacc::CmpPredicate::gt;
+        break;
+      case nyacc::BinaryOp::Lte:
+        pred = nyacc::CmpPredicate::le;
+        break;
+      case nyacc::BinaryOp::Lt:
+        pred = nyacc::CmpPredicate::lt;
+        break;
+      default:
+        std::cerr << "Unknown Comparison Operator\n";
+        std::abort();
+      }
+
+      value_ = builder_.create<nyacc::CmpOp>(builder_.getUnknownLoc(), pred,
+                                             lhs, rhs);
+    }
     }
   }
 

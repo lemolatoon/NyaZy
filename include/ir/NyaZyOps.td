@@ -2,6 +2,7 @@
 #define NYAZY_OPS
 
 include "NyaZyDialect.td"
+include "NyaZyBase.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
@@ -125,6 +126,45 @@ def NegOp : NyaZyOp<"neg",
 
   let arguments = (ins I64:$operand);
   let results = (outs I64);
+}
+
+def CmpOp
+  : NyaZyOp<"cmp",
+    [Pure]> {
+  let summary = "comparison operation";
+  let description = [{
+    The `cmp` operation is a generic comparison for any types in nyazy. Its two
+    arguments can be any types as long as their types
+    match. The operation produces an i1 for the all cases.
+
+    Its first argument is an attribute that defines which type of comparison is
+    performed. The following comparisons are supported:
+
+    -   equal (mnemonic: `"eq"`; integer value: `0`)
+    -   not equal (mnemonic: `"ne"`; integer value: `1`)
+    -   less than (mnemonic: `"lt"`; integer value: `2`)
+    -   less than or equal (mnemonic: `"le"`; integer value: `3`)
+    -   greater than (mnemonic: `"gt"`; integer value: `4`)
+    -   greater than or equal (mnemonic: `"ge"`; integer value: `5`)
+
+    The result is `1` if the comparison is true and `0` otherwise.
+
+    Note: while the custom assembly form uses strings, the actual underlying
+    attribute has integer type (or rather enum class in C++ code) as seen from
+    the generic assembly form. String literals are used to improve readability
+    of the IR by humans.
+  }];
+
+  let arguments = (ins NyaZy_CmpPredicateAttr:$predicate,
+                       AnyType:$lhs,
+                       AnyType:$rhs);
+  let results = (outs I1);
+
+  let extraClassDeclaration = [{
+    static std::optional<nyacc::CmpPredicate> getPredicateByName(mlir::StringRef name);
+  }];
+
+  let assemblyFormat = "$predicate `,` $lhs `,` $rhs attr-dict `:` type($lhs) `vs` type($rhs)";
 }
 
 //===----------------------------------------------------------------------===//

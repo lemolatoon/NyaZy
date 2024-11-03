@@ -8,6 +8,23 @@
 
 namespace nyacc {
 
+std::optional<CmpPredicate> CmpOp::getPredicateByName(mlir::StringRef name) {
+  if (name == "eq")
+    return CmpPredicate::eq;
+  if (name == "ne")
+    return CmpPredicate::ne;
+  if (name == "lt")
+    return CmpPredicate::lt;
+  if (name == "le")
+    return CmpPredicate::le;
+  if (name == "gt")
+    return CmpPredicate::gt;
+  if (name == "ge")
+    return CmpPredicate::ge;
+
+  return std::nullopt;
+}
+
 void FuncOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
                    llvm::StringRef name, mlir::FunctionType type,
                    llvm::ArrayRef<mlir::NamedAttribute> attrs) {

@@ -19,6 +19,9 @@ public:
     Slash,
     OpenParen,
     CloseParen,
+    Eq,
+    Gt,
+    Lt,
     Eof,
   };
   static const char *tokenKindToString(TokenKind kind) {
@@ -39,6 +42,12 @@ public:
       return "CloseParen";
     case TokenKind::Eof:
       return "Eof";
+    case TokenKind::Eq:
+      return "Eq";
+    case TokenKind::Gt:
+      return "Gt";
+    case TokenKind::Lt:
+      return "Lt";
     }
   }
   Token(TokenKind kind, std::string_view text, Location loc)

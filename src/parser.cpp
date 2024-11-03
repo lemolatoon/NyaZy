@@ -1,6 +1,7 @@
 #include "parser.h"
 #include "ast.h"
 #include <charconv>
+#include <initializer_list>
 #include <iostream>
 #include <memory>
 
@@ -11,9 +12,38 @@ ModuleAST Parser::parseModule() {
   return ModuleAST(std::move(expr));
 }
 
-// "1+1", "1"をparse
-// "1+2+3"をparse
-std::unique_ptr<ExprASTNode> Parser::parseExpr() {
+std::unique_ptr<ExprASTNode> Parser::parseExpr() { return parseCompare(); }
+
+std::unique_ptr<ExprASTNode> Parser::parseCompare() {
+  auto lhs = parseAdd();
+
+  while (true) {
+    BinaryOp op;
+    if (startsWith({Token::TokenKind::Eq, Token::TokenKind::Eq})) {
+      pos_ += 2;
+      op = BinaryOp::Eq;
+    } else if (startsWith({Token::TokenKind::Gt, Token::TokenKind::Eq})) {
+      pos_ += 2;
+      op = BinaryOp::Gte;
+    } else if (startsWith({Token::TokenKind::Gt})) {
+      pos_ += 1;
+      op = BinaryOp::Gt;
+    } else if (startsWith({Token::TokenKind::Lt, Token::TokenKind::Eq})) {
+      pos_ += 2;
+      op = BinaryOp::Lte;
+    } else if (startsWith({Token::TokenKind::Lt})) {
+      pos_ += 1;
+      op = BinaryOp::Lt;
+    } else {
+      return lhs;
+    }
+    auto rhs = parseAdd();
+    lhs = std::make_unique<BinaryExpr>(std::move(lhs), std::move(rhs), op);
+    continue;
+  }
+}
+
+std::unique_ptr<ExprASTNode> Parser::parseAdd() {
   std::unique_ptr<ExprASTNode> node = parseMul();
 
   while (true) {
@@ -102,6 +132,20 @@ std::unique_ptr<ExprASTNode> Parser::parsePrimary() {
     std::abort();
     break;
   }
+}
+
+bool Parser::startsWith(std::initializer_list<Token::TokenKind> tokens) const {
+  if (pos_ + tokens.size() > tokens_.size()) {
+    return false;
+  }
+  auto it = tokens.begin();
+  for (size_t i = 0; i < tokens.size(); i++) {
+    if (tokens_[pos_ + i].getKind() != *it) {
+      return false;
+    }
+    it++;
+  }
+  return true;
 }
 
 } // namespace nyacc
