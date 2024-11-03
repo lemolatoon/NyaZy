@@ -16,6 +16,7 @@ private:
   std::unique_ptr<ExprASTNode> parseAdd();
   std::unique_ptr<ExprASTNode> parseMul();
   std::unique_ptr<ExprASTNode> parseUnary();
+  std::unique_ptr<ExprASTNode> parsePostFix();
   std::unique_ptr<ExprASTNode> parsePrimary();
 
   bool startsWith(std::initializer_list<Token::TokenKind> list) const;

@@ -25,6 +25,16 @@ std::optional<CmpPredicate> CmpOp::getPredicateByName(mlir::StringRef name) {
   return std::nullopt;
 }
 
+/// CastOp only accepts casts between primitive types
+bool CastOp::areCastCompatible(mlir::TypeRange inputs, mlir::TypeRange outputs) {
+  if (inputs.size() != 1 || outputs.size() != 1) {
+    return false;
+  }
+  auto input = inputs.front();
+  auto output = outputs.front();
+  return input.isIntOrFloat() && output.isIntOrFloat();
+}
+
 void FuncOp::build(mlir::OpBuilder &builder, mlir::OperationState &state,
                    llvm::StringRef name, mlir::FunctionType type,
                    llvm::ArrayRef<mlir::NamedAttribute> attrs) {

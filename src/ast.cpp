@@ -18,6 +18,14 @@ void UnaryExpr::dump(int level) const {
   std::cout << std::string(level * 2, ' ') << ")\n";
 }
 
+void CastExpr::dump(int level) const {
+  std::cout << std::string(level * 2, ' ') << "CastExpr(\n";
+  expr_->dump(level + 1);
+  std::cout << std::string((level + 1) * 2, ' ') << "->" << &getCastTo()
+            << "\n";
+  std::cout << std::string(level * 2, ' ') << ")\n";
+}
+
 void BinaryExpr::dump(int level) const {
   std::cout << std::string(level * 2, ' ') << "BinaryExpr(\n";
   lhs_->dump(level + 1);

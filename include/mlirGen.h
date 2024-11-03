@@ -1,4 +1,6 @@
 #pragma once
+#include "types.h"
+#include <mlir/IR/Types.h>
 
 namespace mlir {
 template <class OpT> class OwningOpRef;
@@ -8,6 +10,9 @@ class MLIRContext;
 
 namespace nyacc {
 class ModuleAST;
+
+mlir::Type asMLIRType(mlir::MLIRContext *ctx, Type type);
+mlir::Type asMLIRType(mlir::MLIRContext *ctx, PrimitiveType type);
 
 class MLIRGen {
 public:

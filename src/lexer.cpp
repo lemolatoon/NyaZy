@@ -118,10 +118,10 @@ tl::expected<std::vector<Token>, ErrorInfo> Lexer::tokenize() {
       continue;
     }
 
-    if (!atEof() && !startsWithSpace()) {
+    if (!atEof() && !startsWithSpace(true)) {
       const size_t startPos = pos_;
       advance();
-      while (!atEof() && !startsWithSpace()) {
+      while (!atEof() && !startsWithSpace(true)) {
         advance();
       }
       tokens.emplace_back(Token::TokenKind::Ident,

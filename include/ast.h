@@ -1,5 +1,6 @@
 #pragma once
 
+#include "types.h"
 #include <cstdint>
 #include <memory>
 
@@ -10,6 +11,7 @@ public:
   virtual void visit(const class ModuleAST &node) = 0;
   virtual void visit(const class NumLitExpr &node) = 0;
   virtual void visit(const class BinaryExpr &node) = 0;
+  virtual void visit(const class CastExpr &node) = 0;
   virtual void visit(const class UnaryExpr &node) = 0;
 };
 
@@ -18,6 +20,7 @@ public:
   enum class ExprKind {
     NumLit,
     Unary,
+    Cast,
     Binary,
   };
   explicit ExprASTNode(ExprKind kind) : kind_(kind) {}
@@ -139,6 +142,25 @@ private:
   BinaryOp op_;
 };
 
+class CastExpr : public ExprASTNode {
+public:
+  CastExpr(std::unique_ptr<ExprASTNode> expr, PrimitiveType type)
+      : ExprASTNode(ExprKind::Cast), expr_(std::move(expr)), type_(type) {}
+  void accept(Visitor &v) override { v.visit(*this); }
+
+  static bool classof(const ExprASTNode *node) {
+    return node->getKind() == ExprKind::Cast;
+  }
+
+  void dump(int level) const override;
+  const std::unique_ptr<ExprASTNode> &getExpr() const { return expr_; }
+  const PrimitiveType &getCastTo() const { return type_; }
+
+private:
+  std::unique_ptr<ExprASTNode> expr_;
+  PrimitiveType type_;
+};
+
 class ModuleAST {
 public:
   ModuleAST(std::unique_ptr<ExprASTNode> expr) : expr_(std::move(expr)) {}
@@ -149,4 +171,5 @@ public:
 private:
   std::unique_ptr<ExprASTNode> expr_;
 };
+
 } // namespace nyacc

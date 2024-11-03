@@ -11,6 +11,7 @@ include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
+include "mlir/Interfaces/CastInterfaces.td"
 
 // Almost taken from `arith.constant`
 
@@ -39,6 +40,22 @@ def ConstantOp : NyaZyOp<"constant",
     let results = (outs /*SignlessIntegerOrFloatLike*/AnyType:$result);
 
     let assemblyFormat = "attr-dict $value";
+}
+
+//===----------------------------------------------------------------------===//
+// CastOp
+//===----------------------------------------------------------------------===//
+def CastOp : NyaZyOp<"cast", 
+    [Pure,
+     DeclareOpInterfaceMethods<CastOpInterface>
+     ]> {
+  let summary = "type cast operation";
+  let description = [{
+    The "cast" operation converts an input value from one primitive type to an another primitive type. This corresponds to the NyaZy's "as $type" expression.
+  }];
+  let arguments = (ins AnyType:$in);
+  let results = (outs AnyType:$out);
+  let assemblyFormat = "$in attr-dict `:` type($in) `to` type($out)";
 }
 
 //===----------------------------------------------------------------------===//
