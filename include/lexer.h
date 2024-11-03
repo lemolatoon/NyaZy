@@ -13,6 +13,7 @@ class Token {
 public:
   enum class TokenKind {
     NumLit,
+    Ident,
     Plus,
     Minus,
     Star,
@@ -22,6 +23,7 @@ public:
     Eq,
     Gt,
     Lt,
+    As,
     Eof,
   };
   static const char *tokenKindToString(TokenKind kind) {
@@ -48,6 +50,11 @@ public:
       return "Gt";
     case TokenKind::Lt:
       return "Lt";
+    case TokenKind::As:
+      return "As";
+    case TokenKind::Ident:
+      return "Ident";
+      break;
     }
   }
   Token(TokenKind kind, std::string_view text, Location loc)
@@ -82,6 +89,8 @@ private:
   void advance();
 
   bool atEof() const;
+  bool startsWith(std::string_view sv) const;
+  bool startsWithSpace(bool includesNewline = false) const;
 
   void nextLine();
 

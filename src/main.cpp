@@ -34,7 +34,7 @@
 
 int main() {
   std::string src = R"(
-  123 > -2
+  (3 == 3) as i64
 )";
   llvm::outs() << "Source code:\n";
   llvm::outs() << src;

@@ -7,6 +7,24 @@
 #include "mlir/IR/MLIRContext.h"
 #include <iostream>
 #include <mlir/Dialect/Func/IR/FuncOps.h>
+#include <mlir/IR/BuiltinTypes.h>
+
+namespace nyacc {
+mlir::Type asMLIRType(mlir::MLIRContext *ctx, Type type) {
+  switch (type.getKind()) {
+  case Type::TypeKind::Primitive:
+    return asMLIRType(ctx, llvm::cast<PrimitiveType>(type));
+  }
+}
+
+mlir::Type asMLIRType(mlir::MLIRContext *ctx, PrimitiveType type) {
+  switch (type.getPrimitiveKind()) {
+  case PrimitiveType::Kind::SInt:
+    return mlir::IntegerType::get(ctx, type.getBitWidth());
+  }
+}
+
+} // namespace nyacc
 
 namespace {
 
@@ -51,6 +69,15 @@ public:
       break;
     }
     }
+  }
+
+  void visit(const nyacc::CastExpr &castExpr) override {
+    castExpr.getExpr()->accept(*this);
+    auto expr = value_.value();
+    mlir::Type out =
+        nyacc::asMLIRType(builder_.getContext(), castExpr.getCastTo());
+    value_ =
+        builder_.create<nyacc::CastOp>(builder_.getUnknownLoc(), out, expr);
   }
 
   // TODO

@@ -94,12 +94,50 @@ std::unique_ptr<ExprASTNode> Parser::parseUnary() {
     UnaryOp op = token.getKind() == Token::TokenKind::Plus ? UnaryOp::Plus
                                                            : UnaryOp::Minus;
     pos_++;
-    auto expr = parsePrimary();
+    auto expr = parsePostFix();
     return std::make_unique<UnaryExpr>(std::move(expr), op);
   }
   default:
-    return parsePrimary();
+    return parsePostFix();
   }
+}
+
+std::unique_ptr<ExprASTNode> Parser::parsePostFix() {
+  auto expr = parsePrimary();
+
+  if (!startsWith({Token::TokenKind::As})) {
+    return expr;
+  }
+
+  pos_++;
+
+  const auto typeIdent = tokens_[pos_];
+  if (typeIdent.getKind() != Token::TokenKind::Ident) {
+    std::cerr << "Expected Ident but got "
+              << Token::tokenKindToString(typeIdent.getKind()) << std::endl;
+    std::abort();
+  }
+
+  if (typeIdent.text()[0] != 'i') {
+    std::cerr << "Currently only types started with 'i' is supported but got "
+              << std::string{typeIdent.text()} << std::endl;
+  }
+
+  size_t bitWidth;
+
+  {
+    auto sv = typeIdent.text().substr(1);
+    auto [ptr, ec] =
+        std::from_chars(sv.data(), sv.data() + sv.size(), bitWidth);
+
+    if (ec != std::errc()) {
+      std::cerr << "Parse BitWidth of Type failed" << std::string{sv}
+                << std::endl;
+    }
+  }
+
+  return std::make_unique<CastExpr>(
+      std::move(expr), PrimitiveType{PrimitiveType::Kind::SInt, bitWidth});
 }
 
 std::unique_ptr<ExprASTNode> Parser::parsePrimary() {
