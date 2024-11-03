@@ -21,6 +21,23 @@ void Lexer::advanceN(size_t n) {
 }
 void Lexer::advance() { advanceN(1); }
 bool Lexer::atEof() const { return pos_ >= input_.size(); }
+bool Lexer::startsWithSpace(bool includesNewline) const {
+  char c = input_[pos_];
+  return (includesNewline && c == '\n') || c == '\t' || c == ' ' || c == '\r';
+}
+bool Lexer::startsWith(std::string_view sv) const {
+  if (pos_ + sv.size() > input_.size()) {
+    return false;
+  }
+
+  for (size_t i = 0; i < sv.size(); i++) {
+    if (input_[pos_ + i] != sv[i]) {
+      return false;
+    }
+  }
+
+  return true;
+}
 void Lexer::nextLine() {
   assert(input_[pos_] == '\n' &&
          "nextLine() must be called at the beginning of a line");
@@ -48,13 +65,13 @@ tl::expected<std::vector<Token>, ErrorInfo> Lexer::tokenize() {
       continue;
     }
 
-    if (input_[pos_] == ' ') {
-      advance();
+    if (input_[pos_] == '\n') {
+      nextLine();
       continue;
     }
 
-    if (input_[pos_] == '\n') {
-      nextLine();
+    if (startsWithSpace(false)) {
+      advance();
       continue;
     }
 
@@ -80,6 +97,36 @@ tl::expected<std::vector<Token>, ErrorInfo> Lexer::tokenize() {
       }
     }
     if (shouldContinue) {
+      continue;
+    }
+
+    const auto long_token_mapping = {
+        std::pair<std::string_view, Token::TokenKind>{"as",
+                                                      Token::TokenKind::As},
+    };
+
+    for (const auto &[c, kind] : long_token_mapping) {
+      if (startsWith(c)) {
+        tokens.emplace_back(kind, input_.substr(pos_, c.size()),
+                            currentLocation());
+        advanceN(c.size());
+        shouldContinue = true;
+        break;
+      }
+    }
+    if (shouldContinue) {
+      continue;
+    }
+
+    if (!atEof() && !startsWithSpace()) {
+      const size_t startPos = pos_;
+      advance();
+      while (!atEof() && !startsWithSpace()) {
+        advance();
+      }
+      tokens.emplace_back(Token::TokenKind::Ident,
+                          input_.substr(startPos, pos_ - startPos),
+                          currentLocation());
       continue;
     }
 
