@@ -27,17 +27,6 @@ int runIR(std::unique_ptr<llvm::Module> &module) {
 
   llvm::orc::ThreadSafeContext context(std::make_unique<llvm::LLVMContext>());
 
-  // auto jit = llvm::orc::LLJITBuilder().create();
-  // // EXPECT_TRUE(!!jit) << "Error creating LLJIT: " <<
-  // llvm::toString(jit.takeError()) << "\n";
-
-  // llvm::orc::ThreadSafeModule tsm(std::move(module), context);
-  // // EXPECT_TRUE(!!tsm) << "Error creating ThreadSafeModule\n";
-
-  // auto symbol = jit->get()->lookup("main");
-  // // EXPECT_TRUE(!!symbol) << "Error looking up symbol: " <<
-  // llvm::toString(symbol.takeError()) << "\n";
-
   auto jit = llvm::orc::LLJITBuilder().create();
   EXPECT_TRUE(!!jit) << "Error creating LLJIT: "
                      << llvm::toString(jit.takeError()) << "\n";
@@ -89,6 +78,7 @@ int runNyaZy(std::string src) {
   mlir::registerLLVMDialectTranslation(*module->getContext());
   llvm::LLVMContext llvmContext;
   auto llvmModule = mlir::translateModuleToLLVMIR(*module, llvmContext);
+  std::cerr << llvmModule << "\n";
   EXPECT_TRUE(llvmModule) << "Failed to emit LLVM IR:\n" << src << "\n";
   llvmModule->dump();
 
@@ -105,6 +95,16 @@ TEST(SimpleTest, ArithOps) {
   EXPECT_EQ(3, runNyaZy("1*(2+5)/2"));
   EXPECT_EQ(3, runNyaZy("+2+1"));
   EXPECT_EQ(-1, runNyaZy("-2+1"));
+}
+
+TEST(SimpleTest, CompareOps) {
+  EXPECT_EQ(1, runNyaZy("(3 == 3) as i64"));
+
+  EXPECT_EQ(1, runNyaZy("(3 >= -3) as i64"));
+  EXPECT_EQ(1, runNyaZy("(3 > -3) as i64"));
+
+  EXPECT_EQ(0, runNyaZy("(3 <= -3) as i64"));
+  EXPECT_EQ(0, runNyaZy("(3 < -3) as i64"));
 }
 
 // メイン関数

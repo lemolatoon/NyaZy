@@ -143,7 +143,81 @@ struct CmpOpLowering : public mlir::OpConversionPattern<nyacc::CmpOp> {
 		// auto arithPredAttr = mlir::arith::invertPredicate(arithPred);
 		auto loc = op->getLoc();
 		auto arithCmpOp = rewriter.create<mlir::arith::CmpIOp>(loc, arithPred, adaptor.getLhs(), adaptor.getRhs());
-    rewriter.replaceOp(op, arithCmpOp);
+    auto u1Type = rewriter.getIntegerType(1, false);
+    auto unsignedCmpResult = rewriter.create<mlir::arith::BitcastOp>(loc, u1Type, arithCmpOp);
+    rewriter.replaceOp(op, unsignedCmpResult);
+
+    return mlir::success();
+  }
+};
+
+struct CastOpLowering : public mlir::OpConversionPattern<nyacc::CastOp> {
+  CastOpLowering(mlir::MLIRContext *ctx)
+      : mlir::OpConversionPattern<nyacc::CastOp>(ctx) {}
+
+  mlir::LogicalResult
+  matchAndRewrite(nyacc::CastOp op, nyacc::CastOp::Adaptor adaptor [[maybe_unused]],
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto fromT = op.getIn().getType();
+    auto toT = op.getType();
+		auto loc = op->getLoc();
+    if (fromT == toT) {
+      rewriter.replaceOp(op, op.getIn());
+      return mlir::success();
+    }
+
+    const auto int2fp = [&](mlir::Value from, mlir::FloatType floatType) -> mlir::Value {
+      assert(from.getType().isInteger());
+      if (from.getType().isUnsignedInteger()) {
+        return rewriter.create<mlir::arith::UIToFPOp>(loc, floatType, from);
+      } else {
+        return rewriter.create<mlir::arith::SIToFPOp>(loc, floatType, from);
+      }
+    };
+    
+    const auto fp2int = [&](mlir::Value from, mlir::IntegerType intType) -> mlir::Value {
+      assert(from.getType().isIntOrFloat() && !from.getType().isInteger());
+      if (from.getType().isUnsignedInteger()) {
+        return rewriter.create<mlir::arith::FPToUIOp>(loc, intType, from);
+      } else {
+        return rewriter.create<mlir::arith::FPToSIOp>(loc, intType, from);
+      }
+    };
+
+    const auto int2intExt = [&](mlir::Value from, mlir::IntegerType intType) -> mlir::Value {
+      assert(from.getType().getIntOrFloatBitWidth() < intType.getIntOrFloatBitWidth());
+      if (from.getType().isUnsignedInteger()) {
+        return rewriter.create<mlir::arith::ExtUIOp>(loc, intType, from);
+      } else {
+        return rewriter.create<mlir::arith::ExtSIOp>(loc, intType, from);
+      }
+    };
+
+    const auto int2intTrunc = [&](mlir::Value from, mlir::IntegerType intType) -> mlir::Value {
+      assert(from.getType().getIntOrFloatBitWidth() > intType.getIntOrFloatBitWidth());
+      return rewriter.create<mlir::arith::TruncIOp>(loc, intType, from);
+    };
+
+    auto value = op.getIn();
+    if (toT.isInteger()) {
+      const mlir::IntegerType intToT = llvm::cast<mlir::IntegerType>(toT);
+      if (!fromT.isInteger()) {
+        value = fp2int(value, intToT);
+      } else {
+        // int to int
+        if (fromT.getIntOrFloatBitWidth() > toT.getIntOrFloatBitWidth()) {
+          // truncate
+          value = int2intTrunc(value, intToT);
+        } else {
+          // extend
+          value = int2intExt(value, intToT);
+        }
+      }
+    } else {
+      value = int2fp(value, llvm::cast<mlir::FloatType>(toT));
+    }
+
+    rewriter.replaceOp(op, value);
 
     return mlir::success();
   }
@@ -217,7 +291,7 @@ void NyaZyToLLVMPass::runOnOperation() {
   mlir::RewritePatternSet patterns(&getContext());
   // nyazy -> arith + func
   patterns.add<ConstantOpLowering, FuncOpLowering, ReturnOpLowering,
-               AddOpLowering, SubOpLowering, MulOpLowering, DivOpLowering, PosOpLowering, NegOpLowering, CmpOpLowering>(
+               AddOpLowering, SubOpLowering, MulOpLowering, DivOpLowering, PosOpLowering, NegOpLowering, CmpOpLowering, CastOpLowering>(
       &getContext());
 
   // * -> llvm

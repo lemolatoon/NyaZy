@@ -175,7 +175,7 @@ def CmpOp
   let arguments = (ins NyaZy_CmpPredicateAttr:$predicate,
                        AnyType:$lhs,
                        AnyType:$rhs);
-  let results = (outs I1);
+  let results = (outs UI1);
 
   let extraClassDeclaration = [{
     static std::optional<nyacc::CmpPredicate> getPredicateByName(mlir::StringRef name);
