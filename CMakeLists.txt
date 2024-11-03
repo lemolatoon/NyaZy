@@ -38,7 +38,7 @@ add_executable(nyacc)
 add_library(libNYACC)
 add_library(NyaZyDialect)
 add_executable(simpleTest)
-set(CMAKE_CXX_FLAGS "-Wall -Wextra -Werror -fno-rtti")
+set(CMAKE_CXX_FLAGS "-Wall -Wextra -Werror -fno-rtti -g")
 
 ExternalProject_Add(
   tl-expected

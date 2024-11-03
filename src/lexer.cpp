@@ -36,7 +36,7 @@ tl::expected<std::vector<Token>, ErrorInfo> Lexer::tokenize() {
     if (std::isdigit(input_[pos_])) {
       const auto start_pos = pos_;
       auto loc = currentLocation();
-      while (std::isdigit(input_[pos_])) {
+      while (!atEof() && std::isdigit(input_[pos_])) {
         if (start_pos == pos_ && input_[pos_] == '0') {
           advance();
           break;

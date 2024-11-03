@@ -11,11 +11,12 @@ llvm_install_dir = "thirdparty/build/llvm/install"
 llvm_bin_dir = os.path.join(llvm_install_dir, "bin")
 clang_format_path = os.path.join(llvm_bin_dir, "clang-format")
 clang_path = os.path.abspath(os.path.join(llvm_bin_dir, "clang"))
+lld_path = os.path.abspath(os.path.join(llvm_bin_dir, "lld"))
 clang_pp_path = os.path.abspath(os.path.join(llvm_bin_dir, "clang++"))
 
 COMMAND_MAP = {
     "thirdparty": "scripts/thirdparty.sh",
-    "configure": f"scripts/configure.sh",
+    "configure": f"scripts/configure.sh -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang",
     "build": f"ninja -j{os.cpu_count()} -C build",
     "nyacc": "build/nyacc",
     "test": "ctest --test-dir build/test --output-on-failure",

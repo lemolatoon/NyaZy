@@ -65,7 +65,7 @@ struct BinaryOpLowering : public mlir::OpConversionPattern<BinaryOp> {
       : mlir::OpConversionPattern<BinaryOp>(ctx) {}
 
   mlir::LogicalResult
-  matchAndRewrite(BinaryOp op, BinaryOp::Adaptor adaptor [[maybe_unused]],
+  matchAndRewrite(BinaryOp op, typename BinaryOp::Adaptor adaptor [[maybe_unused]],
                   mlir::ConversionPatternRewriter &rewriter) const override {
     auto binOp = mlir::cast<BinaryOp>(op);
     rewriter.replaceOp(op, rewriter.create<LoweredBinaryOp>(
@@ -105,6 +105,45 @@ struct NegOpLowering : public mlir::OpConversionPattern<nyacc::NegOp> {
         op->getLoc(), rewriter.getI64Type(), rewriter.getI64IntegerAttr(0));
     rewriter.replaceOp(op, rewriter.create<mlir::arith::SubIOp>(
                                op->getLoc(), cst0, unaryOp.getOperand()));
+
+    return mlir::success();
+  }
+};
+
+struct CmpOpLowering : public mlir::OpConversionPattern<nyacc::CmpOp> {
+  CmpOpLowering(mlir::MLIRContext *ctx)
+      : mlir::OpConversionPattern<nyacc::CmpOp>(ctx) {}
+
+  mlir::LogicalResult
+  matchAndRewrite(nyacc::CmpOp op, nyacc::CmpOp::Adaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+		auto pred = adaptor.getPredicate();
+		mlir::arith::CmpIPredicate arithPred;
+		// TODO: assume signed integer here.
+		switch (pred) {
+		case nyacc::CmpPredicate::eq:
+			arithPred =  mlir::arith::CmpIPredicate::eq;
+			break;
+		case nyacc::CmpPredicate::ne:
+			arithPred =  mlir::arith::CmpIPredicate::ne;
+			break;
+		case nyacc::CmpPredicate::lt:
+			arithPred =  mlir::arith::CmpIPredicate::slt;
+			break;
+		case nyacc::CmpPredicate::le:
+			arithPred =  mlir::arith::CmpIPredicate::sle;
+			break;
+		case nyacc::CmpPredicate::gt:
+			arithPred =  mlir::arith::CmpIPredicate::sgt;
+			break;
+		case nyacc::CmpPredicate::ge:
+			arithPred =  mlir::arith::CmpIPredicate::sge;
+			break;
+		}
+		// auto arithPredAttr = mlir::arith::invertPredicate(arithPred);
+		auto loc = op->getLoc();
+		auto arithCmpOp = rewriter.create<mlir::arith::CmpIOp>(loc, arithPred, adaptor.getLhs(), adaptor.getRhs());
+    rewriter.replaceOp(op, arithCmpOp);
 
     return mlir::success();
   }
@@ -178,7 +217,7 @@ void NyaZyToLLVMPass::runOnOperation() {
   mlir::RewritePatternSet patterns(&getContext());
   // nyazy -> arith + func
   patterns.add<ConstantOpLowering, FuncOpLowering, ReturnOpLowering,
-               AddOpLowering, SubOpLowering, MulOpLowering, DivOpLowering, PosOpLowering, NegOpLowering>(
+               AddOpLowering, SubOpLowering, MulOpLowering, DivOpLowering, PosOpLowering, NegOpLowering, CmpOpLowering>(
       &getContext());
 
   // * -> llvm
