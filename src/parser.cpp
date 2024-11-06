@@ -3,16 +3,40 @@
 #include <charconv>
 #include <initializer_list>
 #include <iostream>
+#include <llvm/Support/Casting.h>
 #include <memory>
 
 namespace nyacc {
 
 ModuleAST Parser::parseModule() {
-  auto expr = parseExpr();
-  return ModuleAST(std::move(expr));
+  std::vector<Expr> exprs;
+  while (!startsWith({Token::TokenKind::Eof})) {
+    exprs.emplace_back(parseExpr());
+    std::cout << tokens_[pos_] << std::endl;
+    if (!startsWith({Token::TokenKind::Semi})) {
+      break;
+    }
+    pos_++;
+  }
+  std::cout << "module len: " << exprs.size() << "\n";
+  return ModuleAST(std::move(exprs));
 }
 
-Expr Parser::parseExpr() { return parseCompare(); }
+Expr Parser::parseExpr() { return parseAssign(); }
+
+Expr Parser::parseAssign() {
+  auto lhs = parseCompare();
+  if (startsWith({Token::TokenKind::Eq})) {
+    pos_++;
+    assert(llvm::isa<VariableExpr>(lhs.get()));
+    auto rhs = parseCompare();
+    auto var_expr = llvm::cast<VariableExpr>(lhs.get());
+    scope_->insert(var_expr->getName(), rhs);
+    return std::make_shared<AssignExpr>(std::move(lhs), std::move(rhs));
+  }
+
+  return lhs;
+}
 
 Expr Parser::parseCompare() {
   auto lhs = parseAdd();
@@ -117,6 +141,7 @@ Expr Parser::parsePostFix() {
               << Token::tokenKindToString(typeIdent.getKind()) << std::endl;
     std::abort();
   }
+  pos_++;
 
   if (typeIdent.text()[0] != 'i') {
     std::cerr << "Currently only types started with 'i' is supported but got "
@@ -170,8 +195,11 @@ Expr Parser::parsePrimary() {
     std::string name{token.text()};
     auto expr = scope_->lookup(name);
     if (!expr) {
-      std::cerr << "Variable '" << name << "' not found\n";
-      std::abort();
+      std::cerr << "Variable '" << name << "' not found. ";
+      expr = std::make_shared<NumLitExpr>(0);
+      std::cerr << "instead auto initialize with : ";
+      (*expr)->dump(0);
+      // std::abort();
     }
     return std::make_shared<VariableExpr>(name, *expr);
   }

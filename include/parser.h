@@ -15,6 +15,7 @@ public:
 
 private:
   Expr parseExpr();
+  Expr parseAssign();
   Expr parseCompare();
   Expr parseAdd();
   Expr parseMul();

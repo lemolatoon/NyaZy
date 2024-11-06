@@ -46,7 +46,9 @@ public:
     builder_.setInsertionPointToStart(&mainOp.front());
 
     builder_.setInsertionPointToStart(&mainOp.front());
-    moduleAst.getExpr()->accept(*this);
+    for (auto &expr : moduleAst.getExprs()) {
+      expr->accept(*this);
+    }
     builder_.create<nyacc::ReturnOp>(builder_.getUnknownLoc(), value_.value());
   }
 
@@ -141,9 +143,12 @@ public:
     }
     }
   }
-  void visit(const class nyacc::VariableExpr &node [[maybe_unused]]) override {
-    std::cerr << "unimplemented\n";
-    std::abort();
+  void visit(const class nyacc::VariableExpr &node) override {
+    node.getExpr()->accept(*this);
+  }
+
+  void visit(const class nyacc::AssignExpr &node [[maybe_unused]]) override {
+    // noop
   }
 
 private:

@@ -4,6 +4,7 @@
 #include "scope.h"
 #include "types.h"
 #include <cstdint>
+#include <vector>
 
 namespace nyacc {
 class Visitor {
@@ -15,6 +16,7 @@ public:
   virtual void visit(const class CastExpr &node) = 0;
   virtual void visit(const class UnaryExpr &node) = 0;
   virtual void visit(const class VariableExpr &node) = 0;
+  virtual void visit(const class AssignExpr &node) = 0;
 };
 
 class ExprASTNode {
@@ -25,6 +27,7 @@ public:
     Cast,
     Binary,
     Variable,
+    Assign,
   };
   explicit ExprASTNode(ExprKind kind) : kind_(kind) {}
   virtual ~ExprASTNode() = default;
@@ -163,6 +166,26 @@ private:
   PrimitiveType type_;
 };
 
+class AssignExpr : public ExprASTNode {
+public:
+  AssignExpr(Expr lhs, Expr rhs)
+      : ExprASTNode(ExprKind::Assign), lhs_(std::move(lhs)),
+        rhs_(std::move(rhs)) {}
+  void accept(Visitor &v) override { v.visit(*this); }
+
+  static bool classof(const ExprASTNode *node) {
+    return node->getKind() == ExprKind::Assign;
+  }
+
+  void dump(int level) const override;
+  const Expr &getLhs() const { return lhs_; }
+  const Expr &getRhs() const { return rhs_; }
+
+private:
+  Expr lhs_;
+  Expr rhs_;
+};
+
 class VariableExpr : public ExprASTNode {
 public:
   VariableExpr(std::string name, Expr expr)
@@ -176,6 +199,7 @@ public:
 
   void dump(int level) const override;
   const Expr &getExpr() const { return expr_; }
+  const std::string &getName() const { return name_; }
 
 private:
   std::string name_;
@@ -184,13 +208,13 @@ private:
 
 class ModuleAST {
 public:
-  ModuleAST(Expr expr) : expr_(std::move(expr)) {}
+  ModuleAST(std::vector<Expr> expr) : exprs_(std::move(expr)) {}
   void accept(Visitor &v) const { v.visit(*this); };
   void dump(int level = 0) const;
-  const Expr &getExpr() const { return expr_; }
+  const std::vector<Expr> &getExprs() const { return exprs_; }
 
 private:
-  Expr expr_;
+  std::vector<Expr> exprs_;
 };
 
 } // namespace nyacc

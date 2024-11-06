@@ -34,7 +34,9 @@
 
 int main() {
   std::string src = R"(
-  (3 == 3) as i64
+  a = (3 == 3) as i64;
+  b = 9 + 3;
+  a * 3 * b
 )";
   llvm::outs() << "Source code:\n";
   llvm::outs() << src;

@@ -15,6 +15,7 @@ public:
       : parent_(std::move(parent)), ident_map_() {}
 
   std::optional<Expr> lookup(const std::string &name);
+  void insert(std::string name, Expr expr);
 
 private:
   std::optional<Expr> localLookup(const std::string &name);

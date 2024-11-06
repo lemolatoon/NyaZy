@@ -1,4 +1,5 @@
 #include "scope.h"
+#include <iostream>
 
 namespace nyacc {
 
@@ -12,6 +13,10 @@ std::optional<Expr> Scope::lookup(const std::string &name) {
   }
 
   return std::nullopt;
+}
+
+void Scope::insert(std::string name, Expr expr) {
+  ident_map_.insert({name, expr});
 }
 
 std::optional<Expr> Scope::localLookup(const std::string &name) {

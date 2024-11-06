@@ -4,7 +4,9 @@
 namespace nyacc {
 void ModuleAST::dump(int level) const {
   std::cout << "ModuleAST\n";
-  expr_->dump(level + 1);
+  for (auto &expr : getExprs()) {
+    expr->dump(level + 1);
+  }
 }
 
 void NumLitExpr::dump(int level) const {
@@ -31,6 +33,14 @@ void BinaryExpr::dump(int level) const {
   lhs_->dump(level + 1);
   // print binary op
   std::cout << std::string((level + 1) * 2, ' ') << BinaryOpToStr(op_) << "\n";
+  rhs_->dump(level + 1);
+  std::cout << std::string(level * 2, ' ') << ")\n";
+}
+
+void AssignExpr::dump(int level) const {
+  std::cout << std::string(level * 2, ' ') << "AssignExpr(\n";
+  lhs_->dump(level + 1);
+  std::cout << std::string((level + 1) * 2, ' ') << "=\n";
   rhs_->dump(level + 1);
   std::cout << std::string(level * 2, ' ') << ")\n";
 }
