@@ -12,9 +12,9 @@ ModuleAST Parser::parseModule() {
   return ModuleAST(std::move(expr));
 }
 
-std::unique_ptr<ExprASTNode> Parser::parseExpr() { return parseCompare(); }
+Expr Parser::parseExpr() { return parseCompare(); }
 
-std::unique_ptr<ExprASTNode> Parser::parseCompare() {
+Expr Parser::parseCompare() {
   auto lhs = parseAdd();
 
   while (true) {
@@ -38,13 +38,13 @@ std::unique_ptr<ExprASTNode> Parser::parseCompare() {
       return lhs;
     }
     auto rhs = parseAdd();
-    lhs = std::make_unique<BinaryExpr>(std::move(lhs), std::move(rhs), op);
+    lhs = std::make_shared<BinaryExpr>(std::move(lhs), std::move(rhs), op);
     continue;
   }
 }
 
-std::unique_ptr<ExprASTNode> Parser::parseAdd() {
-  std::unique_ptr<ExprASTNode> node = parseMul();
+Expr Parser::parseAdd() {
+  Expr node = parseMul();
 
   while (true) {
     const auto &token = tokens_[pos_];
@@ -55,7 +55,7 @@ std::unique_ptr<ExprASTNode> Parser::parseAdd() {
       auto rhs = parseMul();
       BinaryOp op = token.getKind() == Token::TokenKind::Plus ? BinaryOp::Add
                                                               : BinaryOp::Sub;
-      node = std::make_unique<BinaryExpr>(std::move(node), std::move(rhs), op);
+      node = std::make_shared<BinaryExpr>(std::move(node), std::move(rhs), op);
       continue;
     }
     default:
@@ -64,8 +64,8 @@ std::unique_ptr<ExprASTNode> Parser::parseAdd() {
   }
 }
 
-std::unique_ptr<ExprASTNode> Parser::parseMul() {
-  std::unique_ptr<ExprASTNode> node = parseUnary();
+Expr Parser::parseMul() {
+  Expr node = parseUnary();
   while (true) {
     const auto &token = tokens_[pos_];
     switch (token.getKind()) {
@@ -75,7 +75,7 @@ std::unique_ptr<ExprASTNode> Parser::parseMul() {
       auto rhs = parseMul();
       BinaryOp op = token.getKind() == Token::TokenKind::Star ? BinaryOp::Mul
                                                               : BinaryOp::Div;
-      node = std::make_unique<BinaryExpr>(std::move(node), std::move(rhs), op);
+      node = std::make_shared<BinaryExpr>(std::move(node), std::move(rhs), op);
       continue;
     }
     default:
@@ -85,7 +85,7 @@ std::unique_ptr<ExprASTNode> Parser::parseMul() {
   return node;
 }
 
-std::unique_ptr<ExprASTNode> Parser::parseUnary() {
+Expr Parser::parseUnary() {
   const auto &token = tokens_[pos_];
 
   switch (token.getKind()) {
@@ -95,14 +95,14 @@ std::unique_ptr<ExprASTNode> Parser::parseUnary() {
                                                            : UnaryOp::Minus;
     pos_++;
     auto expr = parsePostFix();
-    return std::make_unique<UnaryExpr>(std::move(expr), op);
+    return std::make_shared<UnaryExpr>(std::move(expr), op);
   }
   default:
     return parsePostFix();
   }
 }
 
-std::unique_ptr<ExprASTNode> Parser::parsePostFix() {
+Expr Parser::parsePostFix() {
   auto expr = parsePrimary();
 
   if (!startsWith({Token::TokenKind::As})) {
@@ -136,11 +136,11 @@ std::unique_ptr<ExprASTNode> Parser::parsePostFix() {
     }
   }
 
-  return std::make_unique<CastExpr>(
+  return std::make_shared<CastExpr>(
       std::move(expr), PrimitiveType{PrimitiveType::Kind::SInt, bitWidth});
 }
 
-std::unique_ptr<ExprASTNode> Parser::parsePrimary() {
+Expr Parser::parsePrimary() {
   const auto &token = tokens_[pos_];
   switch (token.getKind()) {
   case Token::TokenKind::NumLit: {
@@ -149,7 +149,7 @@ std::unique_ptr<ExprASTNode> Parser::parsePrimary() {
         token.text().data(), token.text().data() + token.text().size(), result);
     if (ec == std::errc()) {
       pos_++;
-      return std::make_unique<NumLitExpr>(result);
+      return std::make_shared<NumLitExpr>(result);
     } else {
       std::cerr << "Unexpected token: " << token << "\n";
       std::abort();
@@ -164,6 +164,16 @@ std::unique_ptr<ExprASTNode> Parser::parsePrimary() {
     }
     pos_++;
     return expr;
+  }
+  case Token::TokenKind::Ident: {
+    pos_++;
+    std::string name{token.text()};
+    auto expr = scope_->lookup(name);
+    if (!expr) {
+      std::cerr << "Variable '" << name << "' not found\n";
+      std::abort();
+    }
+    return std::make_shared<VariableExpr>(name, *expr);
   }
   default:
     std::cerr << "Unexpected token: " << token << "\n";

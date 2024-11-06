@@ -1,8 +1,9 @@
 #pragma once
 
+#include "expr.h"
+#include "scope.h"
 #include "types.h"
 #include <cstdint>
-#include <memory>
 
 namespace nyacc {
 class Visitor {
@@ -13,6 +14,7 @@ public:
   virtual void visit(const class BinaryExpr &node) = 0;
   virtual void visit(const class CastExpr &node) = 0;
   virtual void visit(const class UnaryExpr &node) = 0;
+  virtual void visit(const class VariableExpr &node) = 0;
 };
 
 class ExprASTNode {
@@ -22,6 +24,7 @@ public:
     Unary,
     Cast,
     Binary,
+    Variable,
   };
   explicit ExprASTNode(ExprKind kind) : kind_(kind) {}
   virtual ~ExprASTNode() = default;
@@ -66,21 +69,21 @@ static inline const char *UnaryOpToStr(UnaryOp op) {
 
 class UnaryExpr : public ExprASTNode {
 public:
-  UnaryExpr(std::unique_ptr<ExprASTNode> expr, UnaryOp op)
+  UnaryExpr(Expr expr, UnaryOp op)
       : ExprASTNode(ExprKind::Unary), expr_(std::move(expr)), op_(op) {}
 
   void accept(Visitor &v) override { v.visit(*this); }
 
   void dump(int level) const override;
   const UnaryOp &getOp() const { return op_; }
-  const std::unique_ptr<ExprASTNode> &getExpr() const { return expr_; }
+  const Expr &getExpr() const { return expr_; }
 
   static bool classof(const ExprASTNode *node) {
     return node->getKind() == ExprKind::Unary;
   }
 
 private:
-  std::unique_ptr<ExprASTNode> expr_;
+  Expr expr_;
   UnaryOp op_;
 };
 
@@ -121,8 +124,7 @@ static inline const char *BinaryOpToStr(BinaryOp op) {
 
 class BinaryExpr : public ExprASTNode {
 public:
-  BinaryExpr(std::unique_ptr<ExprASTNode> lhs, std::unique_ptr<ExprASTNode> rhs,
-             BinaryOp op)
+  BinaryExpr(Expr lhs, Expr rhs, BinaryOp op)
       : ExprASTNode(ExprKind::Binary), lhs_(std::move(lhs)),
         rhs_(std::move(rhs)), op_(op) {}
   void accept(Visitor &v) override { v.visit(*this); }
@@ -132,19 +134,19 @@ public:
   }
 
   void dump(int level) const override;
-  const std::unique_ptr<ExprASTNode> &getLhs() const { return lhs_; }
-  const std::unique_ptr<ExprASTNode> &getRhs() const { return rhs_; }
+  const Expr &getLhs() const { return lhs_; }
+  const Expr &getRhs() const { return rhs_; }
   const BinaryOp &getOp() const { return op_; }
 
 private:
-  std::unique_ptr<ExprASTNode> lhs_;
-  std::unique_ptr<ExprASTNode> rhs_;
+  Expr lhs_;
+  Expr rhs_;
   BinaryOp op_;
 };
 
 class CastExpr : public ExprASTNode {
 public:
-  CastExpr(std::unique_ptr<ExprASTNode> expr, PrimitiveType type)
+  CastExpr(Expr expr, PrimitiveType type)
       : ExprASTNode(ExprKind::Cast), expr_(std::move(expr)), type_(type) {}
   void accept(Visitor &v) override { v.visit(*this); }
 
@@ -153,23 +155,42 @@ public:
   }
 
   void dump(int level) const override;
-  const std::unique_ptr<ExprASTNode> &getExpr() const { return expr_; }
+  const Expr &getExpr() const { return expr_; }
   const PrimitiveType &getCastTo() const { return type_; }
 
 private:
-  std::unique_ptr<ExprASTNode> expr_;
+  Expr expr_;
   PrimitiveType type_;
+};
+
+class VariableExpr : public ExprASTNode {
+public:
+  VariableExpr(std::string name, Expr expr)
+      : ExprASTNode(ExprKind::Variable), name_(std::move(name)),
+        expr_(std::move(expr)) {}
+  void accept(Visitor &v) override { v.visit(*this); }
+
+  static bool classof(const ExprASTNode *node) {
+    return node->getKind() == ExprKind::Variable;
+  }
+
+  void dump(int level) const override;
+  const Expr &getExpr() const { return expr_; }
+
+private:
+  std::string name_;
+  Expr expr_;
 };
 
 class ModuleAST {
 public:
-  ModuleAST(std::unique_ptr<ExprASTNode> expr) : expr_(std::move(expr)) {}
+  ModuleAST(Expr expr) : expr_(std::move(expr)) {}
   void accept(Visitor &v) const { v.visit(*this); };
   void dump(int level = 0) const;
-  const std::unique_ptr<ExprASTNode> &getExpr() const { return expr_; }
+  const Expr &getExpr() const { return expr_; }
 
 private:
-  std::unique_ptr<ExprASTNode> expr_;
+  Expr expr_;
 };
 
 } // namespace nyacc

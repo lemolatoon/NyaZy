@@ -34,4 +34,8 @@ void BinaryExpr::dump(int level) const {
   rhs_->dump(level + 1);
   std::cout << std::string(level * 2, ' ') << ")\n";
 }
+
+void VariableExpr::dump(int level) const {
+  std::cout << std::string(level * 2, ' ') << "VariableExpr(" << name_ << ")\n";
+}
 } // namespace nyacc

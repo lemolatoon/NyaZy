@@ -141,6 +141,10 @@ public:
     }
     }
   }
+  void visit(const class nyacc::VariableExpr &node [[maybe_unused]]) override {
+    std::cerr << "unimplemented\n";
+    std::abort();
+  }
 
 private:
   mlir::OpBuilder builder_;
