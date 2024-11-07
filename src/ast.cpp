@@ -3,10 +3,12 @@
 
 namespace nyacc {
 void ModuleAST::dump(int level) const {
-  std::cout << "ModuleAST\n";
-  for (auto &expr : getExprs()) {
-    expr->dump(level + 1);
+  std::cout << std::string(level * 2, ' ') << "ModuleAST\n";
+  for (auto &stmt : getStmts()) {
+    stmt->dump(level + 1);
   }
+  std::cout << std::string(level * 2, ' ') << "Expr:\n";
+  getExpr()->dump(level + 1);
 }
 
 void DeclareStmt::dump(int level) const {
@@ -59,6 +61,8 @@ void AssignExpr::dump(int level) const {
 }
 
 void VariableExpr::dump(int level) const {
-  std::cout << std::string(level * 2, ' ') << "VariableExpr(" << name_ << ")\n";
+  std::cout << std::string(level * 2, ' ') << "VariableExpr(" << name_
+            << ") -> \n";
+  getExpr()->dump(level + 1);
 }
 } // namespace nyacc

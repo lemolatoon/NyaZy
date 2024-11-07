@@ -46,10 +46,16 @@ public:
     builder_.setInsertionPointToStart(&mainOp.front());
 
     builder_.setInsertionPointToStart(&mainOp.front());
-    for (auto &expr : moduleAst.getExprs()) {
-      expr->accept(*this);
+    for (auto &stmt : moduleAst.getStmts()) {
+      stmt->accept(*this);
     }
+    moduleAst.getExpr()->accept(*this);
     builder_.create<nyacc::ReturnOp>(builder_.getUnknownLoc(), value_.value());
+  }
+
+  void visit(const class nyacc::DeclareStmt &node [[maybe_unused]]) override {}
+  void visit(const class nyacc::ExprStmt &node) override {
+    node.getExpr()->accept(*this);
   }
 
   void visit(const nyacc::NumLitExpr &numLit) override {

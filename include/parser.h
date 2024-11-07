@@ -14,6 +14,8 @@ public:
   ModuleAST parseModule();
 
 private:
+  Stmt parseDeclare();
+
   Expr parseExpr();
   Expr parseAssign();
   Expr parseCompare();

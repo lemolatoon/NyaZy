@@ -108,9 +108,12 @@ TEST(SimpleTest, CompareOps) {
 }
 
 TEST(SimpleTest, Variable) {
-  EXPECT_EQ(10, runNyaZy("a = 5 * 2; a"));
+  EXPECT_EQ(10, runNyaZy("let a = 5 * 2; a"));
 
-  EXPECT_EQ(8, runNyaZy("a = 5; b = 3; a + b"));
+  EXPECT_EQ(8, runNyaZy("let a = 5; let b = 3; a + b"));
+
+  // shadowing
+  EXPECT_EQ(12, runNyaZy("let a = 5; let a = a + 7; a"));
 }
 
 // メイン関数

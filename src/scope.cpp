@@ -16,7 +16,7 @@ std::optional<Expr> Scope::lookup(const std::string &name) {
 }
 
 void Scope::insert(std::string name, Expr expr) {
-  ident_map_.insert({name, expr});
+  ident_map_.insert_or_assign(name, expr);
 }
 
 std::optional<Expr> Scope::localLookup(const std::string &name) {

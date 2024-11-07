@@ -11,6 +11,8 @@ class Visitor {
 public:
   virtual ~Visitor() = default;
   virtual void visit(const class ModuleAST &node) = 0;
+  virtual void visit(const class DeclareStmt &node) = 0;
+  virtual void visit(const class ExprStmt &node) = 0;
   virtual void visit(const class NumLitExpr &node) = 0;
   virtual void visit(const class BinaryExpr &node) = 0;
   virtual void visit(const class CastExpr &node) = 0;
@@ -232,6 +234,7 @@ public:
   }
 
   void dump(int level) const override;
+  void accept(Visitor &v) override { v.visit(*this); }
   const Expr &getInitExpr() const { return expr_; }
   const std::string &getName() const { return name_; }
 
@@ -248,6 +251,7 @@ public:
   }
 
   void dump(int level) const override;
+  void accept(Visitor &v) override { v.visit(*this); }
   const Expr &getExpr() const { return expr_; }
 
 private:
@@ -256,13 +260,16 @@ private:
 
 class ModuleAST {
 public:
-  ModuleAST(std::vector<Expr> expr) : exprs_(std::move(expr)) {}
+  ModuleAST(std::vector<Stmt> stmts, Expr expr)
+      : stmts_(std::move(stmts)), expr_(expr) {}
   void accept(Visitor &v) const { v.visit(*this); };
   void dump(int level = 0) const;
-  const std::vector<Expr> &getExprs() const { return exprs_; }
+  const std::vector<Stmt> &getStmts() const { return stmts_; }
+  const Expr &getExpr() const { return expr_; }
 
 private:
-  std::vector<Expr> exprs_;
+  std::vector<Stmt> stmts_;
+  Expr expr_;
 };
 
 } // namespace nyacc

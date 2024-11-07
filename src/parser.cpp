@@ -9,17 +9,44 @@
 namespace nyacc {
 
 ModuleAST Parser::parseModule() {
-  std::vector<Expr> exprs;
+  std::vector<Stmt> stmts;
+  Expr lastExpr;
   while (!startsWith({Token::TokenKind::Eof})) {
-    exprs.emplace_back(parseExpr());
-    std::cout << tokens_[pos_] << std::endl;
+    if (startsWith({Token::TokenKind::Let})) {
+      stmts.emplace_back(parseDeclare());
+      continue;
+    }
+
+    auto expr = parseExpr();
     if (!startsWith({Token::TokenKind::Semi})) {
+      lastExpr = std::move(expr);
       break;
     }
     pos_++;
+
+    stmts.emplace_back(std::make_shared<ExprStmt>(std::move(expr)));
   }
-  std::cout << "module len: " << exprs.size() << "\n";
-  return ModuleAST(std::move(exprs));
+  return ModuleAST(std::move(stmts), std::move(lastExpr));
+}
+
+Stmt Parser::parseDeclare() {
+  assert(startsWith({Token::TokenKind::Let}));
+  pos_++;
+
+  assert(startsWith({Token::TokenKind::Ident}));
+  auto name = std::string{tokens_[pos_].text()};
+  pos_++;
+
+  assert(startsWith({Token::TokenKind::Eq}));
+  pos_++;
+
+  auto expr = parseExpr();
+
+  assert(startsWith({Token::TokenKind::Semi}));
+  pos_++;
+
+  scope_->insert(name, expr);
+  return std::make_shared<DeclareStmt>(std::move(name), std::move(expr));
 }
 
 Expr Parser::parseExpr() { return parseAssign(); }
@@ -196,10 +223,7 @@ Expr Parser::parsePrimary() {
     auto expr = scope_->lookup(name);
     if (!expr) {
       std::cerr << "Variable '" << name << "' not found. ";
-      expr = std::make_shared<NumLitExpr>(0);
-      std::cerr << "instead auto initialize with : ";
-      (*expr)->dump(0);
-      // std::abort();
+      std::abort();
     }
     return std::make_shared<VariableExpr>(name, *expr);
   }
