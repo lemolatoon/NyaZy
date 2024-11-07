@@ -1,8 +1,10 @@
 #include "lexer.h"
 #include "tl/expected.hpp"
+#include <algorithm>
 #include <cctype>
 #include <error.h>
 #include <iostream>
+#include <ranges>
 #include <sstream>
 #include <string>
 
@@ -85,6 +87,7 @@ tl::expected<std::vector<Token>, ErrorInfo> Lexer::tokenize() {
         {'=', Token::TokenKind::Eq},
         {'>', Token::TokenKind::Gt},
         {'<', Token::TokenKind::Lt},
+        {';', Token::TokenKind::Semi},
     };
 
     bool shouldContinue = false;
@@ -100,10 +103,15 @@ tl::expected<std::vector<Token>, ErrorInfo> Lexer::tokenize() {
       continue;
     }
 
+    const auto isPanct = [&](char c) -> bool {
+      return std::ranges::any_of(token_mapping,
+                                 [&](auto &pair) { return c == pair.first; });
+    };
+
     const auto long_token_mapping = {
         std::pair<std::string_view, Token::TokenKind>{"as",
                                                       Token::TokenKind::As},
-    };
+        {"let", Token::TokenKind::Let}};
 
     for (const auto &[c, kind] : long_token_mapping) {
       if (startsWith(c)) {
@@ -118,10 +126,10 @@ tl::expected<std::vector<Token>, ErrorInfo> Lexer::tokenize() {
       continue;
     }
 
-    if (!atEof() && !startsWithSpace(true)) {
+    if (!atEof() && !startsWithSpace(true) && !isPanct(input_[pos_])) {
       const size_t startPos = pos_;
       advance();
-      while (!atEof() && !startsWithSpace(true)) {
+      while (!atEof() && !startsWithSpace(true) && !isPanct(input_[pos_])) {
         advance();
       }
       tokens.emplace_back(Token::TokenKind::Ident,

@@ -3,8 +3,25 @@
 
 namespace nyacc {
 void ModuleAST::dump(int level) const {
-  std::cout << "ModuleAST\n";
-  expr_->dump(level + 1);
+  std::cout << std::string(level * 2, ' ') << "ModuleAST\n";
+  for (auto &stmt : getStmts()) {
+    stmt->dump(level + 1);
+  }
+  std::cout << std::string(level * 2, ' ') << "Expr:\n";
+  getExpr()->dump(level + 1);
+}
+
+void DeclareStmt::dump(int level) const {
+  std::cout << std::string(level * 2, ' ') << "DeclareStmt(" << name_
+            << " = \n";
+  getInitExpr()->dump(level + 1);
+  std::cout << std::string(level * 2, ' ') << ")\n";
+}
+
+void ExprStmt::dump(int level) const {
+  std::cout << std::string(level * 2, ' ') << "ExprStmt(\n";
+  getExpr()->dump(level + 1);
+  std::cout << std::string(level * 2, ' ') << ")\n";
 }
 
 void NumLitExpr::dump(int level) const {
@@ -33,5 +50,19 @@ void BinaryExpr::dump(int level) const {
   std::cout << std::string((level + 1) * 2, ' ') << BinaryOpToStr(op_) << "\n";
   rhs_->dump(level + 1);
   std::cout << std::string(level * 2, ' ') << ")\n";
+}
+
+void AssignExpr::dump(int level) const {
+  std::cout << std::string(level * 2, ' ') << "AssignExpr(\n";
+  lhs_->dump(level + 1);
+  std::cout << std::string((level + 1) * 2, ' ') << "=\n";
+  rhs_->dump(level + 1);
+  std::cout << std::string(level * 2, ' ') << ")\n";
+}
+
+void VariableExpr::dump(int level) const {
+  std::cout << std::string(level * 2, ' ') << "VariableExpr(" << name_
+            << ") -> \n";
+  getExpr()->dump(level + 1);
 }
 } // namespace nyacc

@@ -8,6 +8,7 @@ set(SRC_FILES
     mlirGen.cpp
     error.cpp
     types.cpp
+    scope.cpp
 )
 
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)

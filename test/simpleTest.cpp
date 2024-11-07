@@ -107,6 +107,15 @@ TEST(SimpleTest, CompareOps) {
   EXPECT_EQ(0, runNyaZy("(3 < -3) as i64"));
 }
 
+TEST(SimpleTest, Variable) {
+  EXPECT_EQ(10, runNyaZy("let a = 5 * 2; a"));
+
+  EXPECT_EQ(8, runNyaZy("let a = 5; let b = 3; a + b"));
+
+  // shadowing
+  EXPECT_EQ(12, runNyaZy("let a = 5; let a = a + 7; a"));
+}
+
 // メイン関数
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
