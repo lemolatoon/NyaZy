@@ -10,6 +10,7 @@
 namespace nyacc {
 
 Result<ModuleAST> Parser::parseModule() {
+  auto loc = peek().getLoc();
   std::vector<Stmt> stmts;
   Expr lastExpr;
   while (!startsWith({Token::TokenKind::Eof})) {
@@ -32,12 +33,14 @@ Result<ModuleAST> Parser::parseModule() {
     }
     pos_++;
 
-    stmts.emplace_back(std::make_shared<ExprStmt>(std::move(*expr)));
+    stmts.emplace_back(
+        std::make_shared<ExprStmt>((*expr)->getLoc(), std::move(*expr)));
   }
-  return ModuleAST(std::move(stmts), std::move(lastExpr));
+  return ModuleAST(loc, std::move(stmts), std::move(lastExpr));
 }
 
 Result<Stmt> Parser::parseDeclare() {
+  auto loc = peek().getLoc();
   EXPECT_EQ(peek().getLoc(), peek().getKind(), Token::TokenKind::Let);
   pos_++;
 
@@ -57,12 +60,13 @@ Result<Stmt> Parser::parseDeclare() {
   pos_++;
 
   scope_->insert(name, *expr);
-  return std::make_shared<DeclareStmt>(std::move(name), std::move(*expr));
+  return std::make_shared<DeclareStmt>(loc, std::move(name), std::move(*expr));
 }
 
 Result<Expr> Parser::parseExpr() { return parseAssign(); }
 
 Result<Expr> Parser::parseAssign() {
+  auto loc = peek().getLoc();
   auto lhs = parseCompare();
   if (!lhs) {
     return lhs;
@@ -76,13 +80,14 @@ Result<Expr> Parser::parseAssign() {
     }
     auto var_expr = llvm::cast<VariableExpr>(lhs->get());
     scope_->insert(var_expr->getName(), *rhs);
-    return std::make_shared<AssignExpr>(std::move(*lhs), std::move(*rhs));
+    return std::make_shared<AssignExpr>(loc, std::move(*lhs), std::move(*rhs));
   }
 
   return lhs;
 }
 
 Result<Expr> Parser::parseCompare() {
+  auto loc = peek().getLoc();
   auto lhs = parseAdd();
   if (!lhs) {
     return lhs;
@@ -112,12 +117,14 @@ Result<Expr> Parser::parseCompare() {
     if (!rhs) {
       return rhs;
     }
-    lhs = std::make_shared<BinaryExpr>(std::move(*lhs), std::move(*rhs), op);
+    lhs =
+        std::make_shared<BinaryExpr>(loc, std::move(*lhs), std::move(*rhs), op);
     continue;
   }
 }
 
 Result<Expr> Parser::parseAdd() {
+  auto loc = peek().getLoc();
   auto node = parseMul();
   if (!node) {
     return node;
@@ -135,8 +142,8 @@ Result<Expr> Parser::parseAdd() {
       }
       BinaryOp op = token.getKind() == Token::TokenKind::Plus ? BinaryOp::Add
                                                               : BinaryOp::Sub;
-      node =
-          std::make_shared<BinaryExpr>(std::move(*node), std::move(*rhs), op);
+      node = std::make_shared<BinaryExpr>(loc, std::move(*node),
+                                          std::move(*rhs), op);
       continue;
     }
     default:
@@ -146,6 +153,7 @@ Result<Expr> Parser::parseAdd() {
 }
 
 Result<Expr> Parser::parseMul() {
+  auto loc = peek().getLoc();
   auto node = parseUnary();
   if (!node) {
     return node;
@@ -162,8 +170,8 @@ Result<Expr> Parser::parseMul() {
       }
       BinaryOp op = token.getKind() == Token::TokenKind::Star ? BinaryOp::Mul
                                                               : BinaryOp::Div;
-      node =
-          std::make_shared<BinaryExpr>(std::move(*node), std::move(*rhs), op);
+      node = std::make_shared<BinaryExpr>(loc, std::move(*node),
+                                          std::move(*rhs), op);
       continue;
     }
     default:
@@ -173,7 +181,8 @@ Result<Expr> Parser::parseMul() {
 }
 
 Result<Expr> Parser::parseUnary() {
-  const auto &token = tokens_[pos_];
+  const auto &token = peek();
+  auto loc = token.getLoc();
 
   switch (token.getKind()) {
   case Token::TokenKind::Plus:
@@ -185,7 +194,7 @@ Result<Expr> Parser::parseUnary() {
     if (!expr) {
       return expr;
     }
-    return std::make_shared<UnaryExpr>(std::move(*expr), op);
+    return std::make_shared<UnaryExpr>(loc, std::move(*expr), op);
   }
   default:
     return parsePostFix();
@@ -193,6 +202,7 @@ Result<Expr> Parser::parseUnary() {
 }
 
 Result<Expr> Parser::parsePostFix() {
+  auto loc = peek().getLoc();
   auto expr = parsePrimary();
   if (!expr) {
     return expr;
@@ -205,16 +215,13 @@ Result<Expr> Parser::parsePostFix() {
   pos_++;
 
   const auto typeIdent = tokens_[pos_];
-  if (typeIdent.getKind() != Token::TokenKind::Ident) {
-    std::cerr << "Expected Ident but got "
-              << Token::tokenKindToString(typeIdent.getKind()) << std::endl;
-    std::abort();
-  }
+  EXPECT_EQ(typeIdent.getLoc(), typeIdent.getKind(), Token::TokenKind::Ident);
   pos_++;
 
   if (typeIdent.text()[0] != 'i') {
-    std::cerr << "Currently only types started with 'i' is supported but got "
-              << std::string{typeIdent.text()} << std::endl;
+    return FATAL(typeIdent.getLoc(),
+                 "Currently only types started with 'i' is supported but got ",
+                 std::string{typeIdent.text()}, "\n");
   }
 
   size_t bitWidth;
@@ -225,17 +232,19 @@ Result<Expr> Parser::parsePostFix() {
         std::from_chars(sv.data(), sv.data() + sv.size(), bitWidth);
 
     if (ec != std::errc()) {
-      std::cerr << "Parse BitWidth of Type failed" << std::string{sv}
-                << std::endl;
+      return FATAL(typeIdent.getLoc(), "Parse BitWidth of Type failed",
+                   std::string{sv}, "\n");
     }
   }
 
   return std::make_shared<CastExpr>(
-      std::move(*expr), PrimitiveType{PrimitiveType::Kind::SInt, bitWidth});
+      loc, std::move(*expr),
+      PrimitiveType{PrimitiveType::Kind::SInt, bitWidth});
 }
 
 Result<Expr> Parser::parsePrimary() {
-  const auto &token = tokens_[pos_];
+  const auto &token = peek();
+  auto loc = token.getLoc();
   switch (token.getKind()) {
   case Token::TokenKind::NumLit: {
     int64_t result = 0;
@@ -243,19 +252,15 @@ Result<Expr> Parser::parsePrimary() {
         token.text().data(), token.text().data() + token.text().size(), result);
     if (ec == std::errc()) {
       pos_++;
-      return std::make_shared<NumLitExpr>(result);
+      return std::make_shared<NumLitExpr>(loc, result);
     } else {
-      std::cerr << "Unexpected token: " << token << "\n";
-      std::abort();
+      return FATAL(loc, "Unexpected token: ", token, "\n");
     }
   }
   case Token::TokenKind::OpenParen: {
     pos_++;
     auto expr = parseExpr();
-    if (tokens_[pos_].getKind() != Token::TokenKind::CloseParen) {
-      std::cerr << "Expected ')'\n";
-      std::abort();
-    }
+    EXPECT_EQ(peek().getLoc(), peek().getKind(), Token::TokenKind::CloseParen);
     pos_++;
     return expr;
   }
@@ -264,10 +269,9 @@ Result<Expr> Parser::parsePrimary() {
     std::string name{token.text()};
     auto expr = scope_->lookup(name);
     if (!expr) {
-      std::cerr << "Variable '" << name << "' not found. ";
-      std::abort();
+      return FATAL(token.getLoc(), "Variable '", name, "' not found. \n");
     }
-    return std::make_shared<VariableExpr>(name, *expr);
+    return std::make_shared<VariableExpr>(loc, name, *expr);
   }
   default:
     return FATAL(token.getLoc(), "Unexpected token: ", token, "\n");

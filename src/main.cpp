@@ -16,6 +16,7 @@
 #include <mlir/Dialect/Func/IR/FuncOps.h>
 #include <mlir/ExecutionEngine/ExecutionEngine.h>
 #include <mlir/ExecutionEngine/OptUtils.h>
+#include <mlir/IR/OperationSupport.h>
 #include <mlir/Pass/Pass.h>
 #include <mlir/Pass/PassManager.h>
 #include <mlir/Pass/PassRegistry.h>

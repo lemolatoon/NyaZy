@@ -5,9 +5,11 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
+#include <error.h>
 #include <iostream>
 #include <mlir/Dialect/Func/IR/FuncOps.h>
 #include <mlir/IR/BuiltinTypes.h>
+#include <mlir/IR/Location.h>
 
 namespace nyacc {
 mlir::Type asMLIRType(mlir::MLIRContext *ctx, Type type) {
@@ -39,9 +41,14 @@ public:
 
   mlir::OwningOpRef<mlir::ModuleOp> takeModule() { return std::move(module_); }
 
+  mlir::Location mlirLoc(nyacc::Location loc) {
+    return mlir::FileLineColLoc::get(builder_.getStringAttr(*loc.file),
+                                     loc.line, loc.col);
+  }
+
   void visit(const nyacc::ModuleAST &moduleAst) override {
     auto mainOp = builder_.create<nyacc::FuncOp>(
-        builder_.getUnknownLoc(), "main", builder_.getFunctionType({}, {}));
+        mlirLoc(moduleAst.getLoc()), "main", builder_.getFunctionType({}, {}));
 
     builder_.setInsertionPointToStart(&mainOp.front());
 
@@ -50,7 +57,8 @@ public:
       stmt->accept(*this);
     }
     moduleAst.getExpr()->accept(*this);
-    builder_.create<nyacc::ReturnOp>(builder_.getUnknownLoc(), value_.value());
+    builder_.create<nyacc::ReturnOp>(mlirLoc(moduleAst.getExpr()->getLoc()),
+                                     value_.value());
   }
 
   void visit(const class nyacc::DeclareStmt &node [[maybe_unused]]) override {}
@@ -60,20 +68,21 @@ public:
 
   void visit(const nyacc::NumLitExpr &numLit) override {
     value_ = builder_.create<nyacc::ConstantOp>(
-        builder_.getUnknownLoc(),
+        mlirLoc(numLit.getLoc()),
         builder_.getI64IntegerAttr(numLit.getValue()));
   }
 
   void visit(const nyacc::UnaryExpr &unaryExpr) override {
+    auto loc = mlirLoc(unaryExpr.getLoc());
     unaryExpr.getExpr()->accept(*this);
     auto expr = value_.value();
     switch (unaryExpr.getOp()) {
     case nyacc::UnaryOp::Plus: {
-      value_ = builder_.create<nyacc::PosOp>(builder_.getUnknownLoc(), expr);
+      value_ = builder_.create<nyacc::PosOp>(loc, expr);
       break;
     }
     case nyacc::UnaryOp::Minus: {
-      value_ = builder_.create<nyacc::NegOp>(builder_.getUnknownLoc(), expr);
+      value_ = builder_.create<nyacc::NegOp>(loc, expr);
       break;
     }
     }
@@ -85,11 +94,12 @@ public:
     mlir::Type out =
         nyacc::asMLIRType(builder_.getContext(), castExpr.getCastTo());
     value_ =
-        builder_.create<nyacc::CastOp>(builder_.getUnknownLoc(), out, expr);
+        builder_.create<nyacc::CastOp>(mlirLoc(castExpr.getLoc()), out, expr);
   }
 
   // TODO
   void visit(const nyacc::BinaryExpr &binaryExpr) override {
+    auto loc = mlirLoc(binaryExpr.getLoc());
     binaryExpr.getLhs()->accept(*this);
     auto lhs = value_.value();
     binaryExpr.getRhs()->accept(*this);
@@ -98,23 +108,19 @@ public:
 
     switch (binaryExpr.getOp()) {
     case nyacc::BinaryOp::Add: {
-      value_ =
-          builder_.create<nyacc::AddOp>(builder_.getUnknownLoc(), lhs, rhs);
+      value_ = builder_.create<nyacc::AddOp>(loc, lhs, rhs);
       break;
     }
     case nyacc::BinaryOp::Sub: {
-      value_ =
-          builder_.create<nyacc::SubOp>(builder_.getUnknownLoc(), lhs, rhs);
+      value_ = builder_.create<nyacc::SubOp>(loc, lhs, rhs);
       break;
     }
     case nyacc::BinaryOp::Mul: {
-      value_ =
-          builder_.create<nyacc::MulOp>(builder_.getUnknownLoc(), lhs, rhs);
+      value_ = builder_.create<nyacc::MulOp>(loc, lhs, rhs);
       break;
     }
     case nyacc::BinaryOp::Div: {
-      value_ =
-          builder_.create<nyacc::DivOp>(builder_.getUnknownLoc(), lhs, rhs);
+      value_ = builder_.create<nyacc::DivOp>(loc, lhs, rhs);
       break;
     }
     case nyacc::BinaryOp::Eq:
@@ -144,8 +150,7 @@ public:
         std::abort();
       }
 
-      value_ = builder_.create<nyacc::CmpOp>(builder_.getUnknownLoc(), pred,
-                                             lhs, rhs);
+      value_ = builder_.create<nyacc::CmpOp>(loc, pred, lhs, rhs);
     }
     }
   }

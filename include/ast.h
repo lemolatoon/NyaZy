@@ -4,6 +4,7 @@
 #include "scope.h"
 #include "types.h"
 #include <cstdint>
+#include <error.h>
 #include <vector>
 
 namespace nyacc {
@@ -31,19 +32,22 @@ public:
     Variable,
     Assign,
   };
-  explicit ExprASTNode(ExprKind kind) : kind_(kind) {}
+  explicit ExprASTNode(Location loc, ExprKind kind) : kind_(kind), loc_(loc) {}
   virtual ~ExprASTNode() = default;
   virtual void accept(class Visitor &v) = 0;
   virtual void dump(int level) const = 0;
-  ExprKind getKind() const { return kind_; };
+  ExprKind getKind() const { return kind_; }
+  Location getLoc() const { return loc_; }
 
 private:
   ExprKind kind_;
+  Location loc_;
 };
 
 class NumLitExpr : public ExprASTNode {
 public:
-  NumLitExpr(int64_t value) : ExprASTNode(ExprKind::NumLit), value_(value) {}
+  NumLitExpr(Location loc, int64_t value)
+      : ExprASTNode(loc, ExprKind::NumLit), value_(value) {}
 
   void accept(Visitor &v) override { v.visit(*this); }
   int64_t getValue() const { return value_; }
@@ -74,8 +78,8 @@ static inline const char *UnaryOpToStr(UnaryOp op) {
 
 class UnaryExpr : public ExprASTNode {
 public:
-  UnaryExpr(Expr expr, UnaryOp op)
-      : ExprASTNode(ExprKind::Unary), expr_(std::move(expr)), op_(op) {}
+  UnaryExpr(Location loc, Expr expr, UnaryOp op)
+      : ExprASTNode(loc, ExprKind::Unary), expr_(std::move(expr)), op_(op) {}
 
   void accept(Visitor &v) override { v.visit(*this); }
 
@@ -129,8 +133,8 @@ static inline const char *BinaryOpToStr(BinaryOp op) {
 
 class BinaryExpr : public ExprASTNode {
 public:
-  BinaryExpr(Expr lhs, Expr rhs, BinaryOp op)
-      : ExprASTNode(ExprKind::Binary), lhs_(std::move(lhs)),
+  BinaryExpr(Location loc, Expr lhs, Expr rhs, BinaryOp op)
+      : ExprASTNode(loc, ExprKind::Binary), lhs_(std::move(lhs)),
         rhs_(std::move(rhs)), op_(op) {}
   void accept(Visitor &v) override { v.visit(*this); }
 
@@ -151,8 +155,8 @@ private:
 
 class CastExpr : public ExprASTNode {
 public:
-  CastExpr(Expr expr, PrimitiveType type)
-      : ExprASTNode(ExprKind::Cast), expr_(std::move(expr)), type_(type) {}
+  CastExpr(Location loc, Expr expr, PrimitiveType type)
+      : ExprASTNode(loc, ExprKind::Cast), expr_(std::move(expr)), type_(type) {}
   void accept(Visitor &v) override { v.visit(*this); }
 
   static bool classof(const ExprASTNode *node) {
@@ -170,8 +174,8 @@ private:
 
 class AssignExpr : public ExprASTNode {
 public:
-  AssignExpr(Expr lhs, Expr rhs)
-      : ExprASTNode(ExprKind::Assign), lhs_(std::move(lhs)),
+  AssignExpr(Location loc, Expr lhs, Expr rhs)
+      : ExprASTNode(loc, ExprKind::Assign), lhs_(std::move(lhs)),
         rhs_(std::move(rhs)) {}
   void accept(Visitor &v) override { v.visit(*this); }
 
@@ -190,8 +194,8 @@ private:
 
 class VariableExpr : public ExprASTNode {
 public:
-  VariableExpr(std::string name, Expr expr)
-      : ExprASTNode(ExprKind::Variable), name_(std::move(name)),
+  VariableExpr(Location loc, std::string name, Expr expr)
+      : ExprASTNode(loc, ExprKind::Variable), name_(std::move(name)),
         expr_(std::move(expr)) {}
   void accept(Visitor &v) override { v.visit(*this); }
 
@@ -214,20 +218,22 @@ public:
     Declare,
     Expr,
   };
-  explicit StmtASTNode(StmtKind kind) : kind_(kind) {}
+  explicit StmtASTNode(Location loc, StmtKind kind) : kind_(kind), loc_(loc) {}
   virtual ~StmtASTNode() = default;
   virtual void accept(class Visitor &v) = 0;
   virtual void dump(int level) const = 0;
-  StmtKind getKind() const { return kind_; };
+  StmtKind getKind() const { return kind_; }
+  Location getLoc() const { return loc_; }
 
 private:
   StmtKind kind_;
+  Location loc_;
 };
 
 class DeclareStmt : public StmtASTNode {
 public:
-  DeclareStmt(std::string name, Expr expr)
-      : StmtASTNode(StmtKind::Declare), name_(std::move(name)),
+  DeclareStmt(Location loc, std::string name, Expr expr)
+      : StmtASTNode(loc, StmtKind::Declare), name_(std::move(name)),
         expr_(std::move(expr)) {}
   static bool classof(const StmtASTNode *node) {
     return node->getKind() == StmtKind::Declare;
@@ -245,7 +251,8 @@ private:
 
 class ExprStmt : public StmtASTNode {
 public:
-  ExprStmt(Expr expr) : StmtASTNode(StmtKind::Expr), expr_(std::move(expr)) {}
+  ExprStmt(Location loc, Expr expr)
+      : StmtASTNode(loc, StmtKind::Expr), expr_(std::move(expr)) {}
   static bool classof(const StmtASTNode *node) {
     return node->getKind() == StmtKind::Expr;
   }
@@ -260,16 +267,18 @@ private:
 
 class ModuleAST {
 public:
-  ModuleAST(std::vector<Stmt> stmts, Expr expr)
-      : stmts_(std::move(stmts)), expr_(expr) {}
+  ModuleAST(Location loc, std::vector<Stmt> stmts, Expr expr)
+      : stmts_(std::move(stmts)), expr_(expr), loc_(loc) {}
   void accept(Visitor &v) const { v.visit(*this); };
   void dump(int level = 0) const;
   const std::vector<Stmt> &getStmts() const { return stmts_; }
   const Expr &getExpr() const { return expr_; }
+  const Location &getLoc() const { return loc_; }
 
 private:
   std::vector<Stmt> stmts_;
   Expr expr_;
+  Location loc_;
 };
 
 } // namespace nyacc
