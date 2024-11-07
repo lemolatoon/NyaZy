@@ -7,7 +7,7 @@ set(LLVM_INSTALL_DIR ${CMAKE_BINARY_DIR}/../thirdparty/build/llvm/install)
 set(LLVM_DIR ${LLVM_INSTALL_DIR}/lib/cmake/llvm)
 set(MLIR_DIR ${LLVM_INSTALL_DIR}/lib/cmake/mlir)
 
-set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD 20)
 
 include(ExternalProject)
 
@@ -38,7 +38,7 @@ add_executable(nyacc)
 add_library(libNYACC)
 add_library(NyaZyDialect)
 add_executable(simpleTest)
-set(CMAKE_CXX_FLAGS "-Wall -Wextra -Werror -fno-rtti -g -fsanitize=undefined,address")
+set(CMAKE_CXX_FLAGS "-Wall -Wextra -Werror -fno-rtti -g")
 
 ExternalProject_Add(
   tl-expected
