@@ -3,6 +3,7 @@
 #include "expr.h"
 #include <memory>
 #include <optional>
+#include <string>
 #include <unordered_map>
 
 namespace nyacc {
