@@ -5,9 +5,12 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
+#include <error.h>
 #include <iostream>
 #include <mlir/Dialect/Func/IR/FuncOps.h>
 #include <mlir/IR/BuiltinTypes.h>
+#include <mlir/IR/Location.h>
+#include <variant>
 
 namespace nyacc {
 mlir::Type asMLIRType(mlir::MLIRContext *ctx, Type type) {
@@ -33,47 +36,71 @@ public:
   MLIRGenVisitor(mlir::MLIRContext &context)
       : builder_(&context),
         module_(mlir::ModuleOp::create(builder_.getUnknownLoc())),
-        value_(std::nullopt) {
+        value_(std::nullopt), flag_(std::monostate{}) {
     builder_.setInsertionPointToStart(module_.getBody());
   }
 
-  mlir::OwningOpRef<mlir::ModuleOp> takeModule() { return std::move(module_); }
+  nyacc::Result<mlir::OwningOpRef<mlir::ModuleOp>> takeModule() {
+    if (auto e = error()) {
+      return *e;
+    }
+    return std::move(module_);
+  }
+
+  mlir::Location mlirLoc(nyacc::Location loc) {
+    return mlir::FileLineColLoc::get(builder_.getStringAttr(*loc.file),
+                                     loc.line, loc.col);
+  }
 
   void visit(const nyacc::ModuleAST &moduleAst) override {
     auto mainOp = builder_.create<nyacc::FuncOp>(
-        builder_.getUnknownLoc(), "main", builder_.getFunctionType({}, {}));
+        mlirLoc(moduleAst.getLoc()), "main", builder_.getFunctionType({}, {}));
 
     builder_.setInsertionPointToStart(&mainOp.front());
 
     builder_.setInsertionPointToStart(&mainOp.front());
     for (auto &stmt : moduleAst.getStmts()) {
       stmt->accept(*this);
+      if (has_error()) {
+        return;
+      }
     }
     moduleAst.getExpr()->accept(*this);
-    builder_.create<nyacc::ReturnOp>(builder_.getUnknownLoc(), value_.value());
+    if (has_error()) {
+      return;
+    }
+    builder_.create<nyacc::ReturnOp>(mlirLoc(moduleAst.getExpr()->getLoc()),
+                                     value_.value());
   }
 
   void visit(const class nyacc::DeclareStmt &node [[maybe_unused]]) override {}
   void visit(const class nyacc::ExprStmt &node) override {
     node.getExpr()->accept(*this);
+    if (has_error()) {
+      return;
+    }
   }
 
   void visit(const nyacc::NumLitExpr &numLit) override {
     value_ = builder_.create<nyacc::ConstantOp>(
-        builder_.getUnknownLoc(),
+        mlirLoc(numLit.getLoc()),
         builder_.getI64IntegerAttr(numLit.getValue()));
   }
 
   void visit(const nyacc::UnaryExpr &unaryExpr) override {
+    auto loc = mlirLoc(unaryExpr.getLoc());
     unaryExpr.getExpr()->accept(*this);
+    if (has_error()) {
+      return;
+    }
     auto expr = value_.value();
     switch (unaryExpr.getOp()) {
     case nyacc::UnaryOp::Plus: {
-      value_ = builder_.create<nyacc::PosOp>(builder_.getUnknownLoc(), expr);
+      value_ = builder_.create<nyacc::PosOp>(loc, expr);
       break;
     }
     case nyacc::UnaryOp::Minus: {
-      value_ = builder_.create<nyacc::NegOp>(builder_.getUnknownLoc(), expr);
+      value_ = builder_.create<nyacc::NegOp>(loc, expr);
       break;
     }
     }
@@ -81,40 +108,47 @@ public:
 
   void visit(const nyacc::CastExpr &castExpr) override {
     castExpr.getExpr()->accept(*this);
+    if (has_error()) {
+      return;
+    }
     auto expr = value_.value();
     mlir::Type out =
         nyacc::asMLIRType(builder_.getContext(), castExpr.getCastTo());
     value_ =
-        builder_.create<nyacc::CastOp>(builder_.getUnknownLoc(), out, expr);
+        builder_.create<nyacc::CastOp>(mlirLoc(castExpr.getLoc()), out, expr);
   }
 
   // TODO
   void visit(const nyacc::BinaryExpr &binaryExpr) override {
+    auto astLoc = binaryExpr.getLoc();
+    auto loc = mlirLoc(astLoc);
     binaryExpr.getLhs()->accept(*this);
+    if (has_error()) {
+      return;
+    }
     auto lhs = value_.value();
     binaryExpr.getRhs()->accept(*this);
+    if (has_error()) {
+      return;
+    }
     auto rhs = value_.value();
     // 今はAddOpのみ
 
     switch (binaryExpr.getOp()) {
     case nyacc::BinaryOp::Add: {
-      value_ =
-          builder_.create<nyacc::AddOp>(builder_.getUnknownLoc(), lhs, rhs);
+      value_ = builder_.create<nyacc::AddOp>(loc, lhs, rhs);
       break;
     }
     case nyacc::BinaryOp::Sub: {
-      value_ =
-          builder_.create<nyacc::SubOp>(builder_.getUnknownLoc(), lhs, rhs);
+      value_ = builder_.create<nyacc::SubOp>(loc, lhs, rhs);
       break;
     }
     case nyacc::BinaryOp::Mul: {
-      value_ =
-          builder_.create<nyacc::MulOp>(builder_.getUnknownLoc(), lhs, rhs);
+      value_ = builder_.create<nyacc::MulOp>(loc, lhs, rhs);
       break;
     }
     case nyacc::BinaryOp::Div: {
-      value_ =
-          builder_.create<nyacc::DivOp>(builder_.getUnknownLoc(), lhs, rhs);
+      value_ = builder_.create<nyacc::DivOp>(loc, lhs, rhs);
       break;
     }
     case nyacc::BinaryOp::Eq:
@@ -140,17 +174,20 @@ public:
         pred = nyacc::CmpPredicate::lt;
         break;
       default:
-        std::cerr << "Unknown Comparison Operator\n";
-        std::abort();
+        flag_ = FATAL(astLoc, "Unknown Comparison Operator",
+                      static_cast<int>(binaryExpr.getOp()), "\n");
+        return;
       }
 
-      value_ = builder_.create<nyacc::CmpOp>(builder_.getUnknownLoc(), pred,
-                                             lhs, rhs);
+      value_ = builder_.create<nyacc::CmpOp>(loc, pred, lhs, rhs);
     }
     }
   }
   void visit(const class nyacc::VariableExpr &node) override {
     node.getExpr()->accept(*this);
+    if (has_error()) {
+      return;
+    }
   }
 
   void visit(const class nyacc::AssignExpr &node [[maybe_unused]]) override {
@@ -158,17 +195,26 @@ public:
   }
 
 private:
+  bool has_error() { return !flag_.has_value(); }
+  std::optional<tl::unexpected<nyacc::ErrorInfo>> error() {
+    if (flag_.has_value()) {
+      return std::nullopt;
+    } else {
+      return tl::unexpected{flag_.error()};
+    }
+  }
   mlir::OpBuilder builder_;
   mlir::ModuleOp module_;
   std::optional<mlir::Value> value_;
+  nyacc::Result<std::monostate> flag_;
 };
 
 } // namespace
 
 namespace nyacc {
 
-mlir::OwningOpRef<mlir::ModuleOp> MLIRGen::gen(mlir::MLIRContext &context,
-                                               const ModuleAST &moduleAst) {
+Result<mlir::OwningOpRef<mlir::ModuleOp>>
+MLIRGen::gen(mlir::MLIRContext &context, const ModuleAST &moduleAst) {
   MLIRGenVisitor visitor{context};
   moduleAst.accept(visitor);
   return visitor.takeModule();

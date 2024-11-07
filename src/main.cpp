@@ -16,6 +16,7 @@
 #include <mlir/Dialect/Func/IR/FuncOps.h>
 #include <mlir/ExecutionEngine/ExecutionEngine.h>
 #include <mlir/ExecutionEngine/OptUtils.h>
+#include <mlir/IR/OperationSupport.h>
 #include <mlir/Pass/Pass.h>
 #include <mlir/Pass/PassManager.h>
 #include <mlir/Pass/PassRegistry.h>
@@ -54,7 +55,12 @@ int main() {
     std::cout << token << "\n";
   }
   nyacc::Parser parser{*tokens};
-  auto moduleAst = parser.parseModule();
+  auto moduleAstOpt = parser.parseModule();
+  if (!moduleAstOpt) {
+    std::cout << moduleAstOpt.error().error(src) << "\n";
+    return 1;
+  }
+  auto moduleAst = *moduleAstOpt;
   llvm::outs() << "AST:\n";
   moduleAst.dump();
 
@@ -63,7 +69,12 @@ int main() {
   context.getOrLoadDialect<mlir::arith::ArithDialect>();
   context.getOrLoadDialect<mlir::LLVM::LLVMDialect>();
   context.getOrLoadDialect<mlir::func::FuncDialect>();
-  auto module = nyacc::MLIRGen::gen(context, moduleAst);
+  auto moduleOpt = nyacc::MLIRGen::gen(context, moduleAst);
+  if (!moduleOpt) {
+    std::cout << moduleOpt.error().error(src) << "\n";
+    return 1;
+  }
+  auto &module = *moduleOpt;
   llvm::outs() << "MLIR:\n";
   module->dump();
 
