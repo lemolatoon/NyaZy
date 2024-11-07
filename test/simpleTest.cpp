@@ -63,7 +63,9 @@ int runNyaZy(std::string src) {
   context.getOrLoadDialect<mlir::arith::ArithDialect>();
   context.getOrLoadDialect<mlir::LLVM::LLVMDialect>();
   context.getOrLoadDialect<mlir::func::FuncDialect>();
-  auto module = nyacc::MLIRGen::gen(context, *ast);
+  auto moduleOpt = nyacc::MLIRGen::gen(context, *ast);
+  EXPECT_TRUE(moduleOpt) << moduleOpt.error().error(src) << "\n";
+  auto &module = *moduleOpt;
 
   EXPECT_TRUE(mlir::succeeded(mlir::verify(*module)))
       << "Module verification failed:\n"

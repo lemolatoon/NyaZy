@@ -69,7 +69,12 @@ int main() {
   context.getOrLoadDialect<mlir::arith::ArithDialect>();
   context.getOrLoadDialect<mlir::LLVM::LLVMDialect>();
   context.getOrLoadDialect<mlir::func::FuncDialect>();
-  auto module = nyacc::MLIRGen::gen(context, moduleAst);
+  auto moduleOpt = nyacc::MLIRGen::gen(context, moduleAst);
+  if (!moduleOpt) {
+    std::cout << moduleOpt.error().error(src) << "\n";
+    return 1;
+  }
+  auto &module = *moduleOpt;
   llvm::outs() << "MLIR:\n";
   module->dump();
 
