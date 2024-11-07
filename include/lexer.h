@@ -25,6 +25,7 @@ public:
     Lt,
     As,
     Semi,
+    Let,
     Eof,
   };
   static const char *tokenKindToString(TokenKind kind) {
@@ -57,6 +58,8 @@ public:
       return "Ident";
     case TokenKind::Semi:
       return "Semi";
+    case TokenKind::Let:
+      return "Let";
       break;
     }
   }

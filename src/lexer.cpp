@@ -111,7 +111,7 @@ tl::expected<std::vector<Token>, ErrorInfo> Lexer::tokenize() {
     const auto long_token_mapping = {
         std::pair<std::string_view, Token::TokenKind>{"as",
                                                       Token::TokenKind::As},
-    };
+        {"let", Token::TokenKind::Let}};
 
     for (const auto &[c, kind] : long_token_mapping) {
       if (startsWith(c)) {

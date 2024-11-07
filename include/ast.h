@@ -206,6 +206,54 @@ private:
   Expr expr_;
 };
 
+class StmtASTNode {
+public:
+  enum class StmtKind {
+    Declare,
+    Expr,
+  };
+  explicit StmtASTNode(StmtKind kind) : kind_(kind) {}
+  virtual ~StmtASTNode() = default;
+  virtual void accept(class Visitor &v) = 0;
+  virtual void dump(int level) const = 0;
+  StmtKind getKind() const { return kind_; };
+
+private:
+  StmtKind kind_;
+};
+
+class DeclareStmt : public StmtASTNode {
+public:
+  DeclareStmt(std::string name, Expr expr)
+      : StmtASTNode(StmtKind::Declare), name_(std::move(name)),
+        expr_(std::move(expr)) {}
+  static bool classof(const StmtASTNode *node) {
+    return node->getKind() == StmtKind::Declare;
+  }
+
+  void dump(int level) const override;
+  const Expr &getInitExpr() const { return expr_; }
+  const std::string &getName() const { return name_; }
+
+private:
+  std::string name_;
+  Expr expr_;
+};
+
+class ExprStmt : public StmtASTNode {
+public:
+  ExprStmt(Expr expr) : StmtASTNode(StmtKind::Expr), expr_(std::move(expr)) {}
+  static bool classof(const StmtASTNode *node) {
+    return node->getKind() == StmtKind::Expr;
+  }
+
+  void dump(int level) const override;
+  const Expr &getExpr() const { return expr_; }
+
+private:
+  Expr expr_;
+};
+
 class ModuleAST {
 public:
   ModuleAST(std::vector<Expr> expr) : exprs_(std::move(expr)) {}

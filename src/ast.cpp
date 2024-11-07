@@ -9,6 +9,19 @@ void ModuleAST::dump(int level) const {
   }
 }
 
+void DeclareStmt::dump(int level) const {
+  std::cout << std::string(level * 2, ' ') << "DeclareStmt(" << name_
+            << " = \n";
+  getInitExpr()->dump(level + 1);
+  std::cout << std::string(level * 2, ' ') << ")\n";
+}
+
+void ExprStmt::dump(int level) const {
+  std::cout << std::string(level * 2, ' ') << "ExprStmt(\n";
+  getExpr()->dump(level + 1);
+  std::cout << std::string(level * 2, ' ') << ")\n";
+}
+
 void NumLitExpr::dump(int level) const {
   std::cout << std::string(level * 2, ' ') << "NumLitExpr(" << value_ << ")\n";
 }
