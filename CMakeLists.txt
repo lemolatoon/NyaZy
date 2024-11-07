@@ -7,9 +7,10 @@ set(LLVM_INSTALL_DIR ${CMAKE_BINARY_DIR}/../thirdparty/build/llvm/install)
 set(LLVM_DIR ${LLVM_INSTALL_DIR}/lib/cmake/llvm)
 set(MLIR_DIR ${LLVM_INSTALL_DIR}/lib/cmake/mlir)
 
-set(CMAKE_CXX_STANDARD 20)
+set(tl-expected_INSTALL_DIR ${CMAKE_BINARY_DIR}/../thirdparty/build/tl-expected/install)
+set(tl-expected_DIR ${tl-expected_INSTALL_DIR}/share/cmake/tl-expected)
 
-include(ExternalProject)
+set(CMAKE_CXX_STANDARD 20)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -34,25 +35,15 @@ include_directories(SYSTEM ${MLIR_INCLUDE_DIRS})
 link_directories(${LLVM_BUILD_LIBRARY_DIR})
 # ---------------------------
 
+find_package(tl-expected REQUIRED CONFIG)
+include_directories(${tl-expected_INSTALL_DIR}/include)
+
+
 add_executable(nyacc)
 add_library(libNYACC)
 add_library(NyaZyDialect)
 add_executable(simpleTest)
 set(CMAKE_CXX_FLAGS "-Wall -Wextra -Werror -fno-rtti -g")
-
-ExternalProject_Add(
-  tl-expected
-  GIT_REPOSITORY https://github.com/TartanLlama/expected.git
-  GIT_TAG        master
-  PREFIX         ${CMAKE_BINARY_DIR}/thirdparty/tl-expected
-  CONFIGURE_COMMAND ""
-  BUILD_COMMAND ""
-  INSTALL_COMMAND ""
-  LOG_DOWNLOAD ON
-)
-
-ExternalProject_Get_Property(tl-expected source_dir)
-include_directories(${source_dir}/include)
 
 include_directories(include)
 add_subdirectory(include)
