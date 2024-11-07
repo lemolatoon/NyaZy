@@ -49,7 +49,7 @@ include_directories(include)
 add_subdirectory(include)
 include_directories(${CMAKE_BINARY_DIR}/include)
 
-add_dependencies(libNYACC MLIRNyaZyDialectIncGen)
+add_dependencies(libNYACC MLIRNyaZyOpsIncGen)
 add_dependencies(libNYACC MLIRNyaZyDialectIncGen)
 
 add_dependencies(nyacc MLIRNyaZyOpsIncGen)
