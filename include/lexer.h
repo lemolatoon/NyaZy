@@ -66,9 +66,12 @@ public:
   Token(TokenKind kind, std::string_view text, Location loc)
       : kind_(kind), text_(text), loc_(loc) {}
   TokenKind getKind() const { return kind_; }
+  Location getLoc() const { return loc_; }
   std::string_view text() const { return text_; }
 
   friend std::ostream &operator<<(std::ostream &os, const Token &token);
+  friend std::ostream &operator<<(std::ostream &os,
+                                  const Token::TokenKind &kind);
 
 private:
   TokenKind kind_;

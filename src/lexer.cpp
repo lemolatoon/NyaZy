@@ -16,6 +16,11 @@ std::ostream &operator<<(std::ostream &os, const Token &token) {
   return os;
 }
 
+std::ostream &operator<<(std::ostream &os, const Token::TokenKind &kind) {
+  os << Token::tokenKindToString(kind);
+  return os;
+}
+
 std::string_view Lexer::head() { return input_.substr(pos_); }
 void Lexer::advanceN(size_t n) {
   pos_ += n;
@@ -47,7 +52,7 @@ void Lexer::nextLine() {
   currentLocation_.line++;
   currentLocation_.col = 0;
 }
-tl::expected<std::vector<Token>, ErrorInfo> Lexer::tokenize() {
+Result<std::vector<Token>> Lexer::tokenize() {
   std::vector<Token> tokens;
 
   while (!atEof()) {
@@ -128,22 +133,17 @@ tl::expected<std::vector<Token>, ErrorInfo> Lexer::tokenize() {
 
     if (!atEof() && !startsWithSpace(true) && !isPanct(input_[pos_])) {
       const size_t startPos = pos_;
+      auto loc = currentLocation();
       advance();
       while (!atEof() && !startsWithSpace(true) && !isPanct(input_[pos_])) {
         advance();
       }
       tokens.emplace_back(Token::TokenKind::Ident,
-                          input_.substr(startPos, pos_ - startPos),
-                          currentLocation());
+                          input_.substr(startPos, pos_ - startPos), loc);
       continue;
     }
 
-    std::string error_msg;
-    std::ostringstream oss;
-    oss << "Unexpected character: " << input_[pos_];
-    error_msg = oss.str();
-    ErrorInfo info{.message = error_msg, .location = currentLocation()};
-    return tl::unexpected{info};
+    return FATAL(currentLocation(), "Unexpected character: ", input_[pos_]);
   }
   tokens.emplace_back(Token::TokenKind::Eof, "", currentLocation());
 

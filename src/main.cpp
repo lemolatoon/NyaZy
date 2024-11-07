@@ -54,7 +54,12 @@ int main() {
     std::cout << token << "\n";
   }
   nyacc::Parser parser{*tokens};
-  auto moduleAst = parser.parseModule();
+  auto moduleAstOpt = parser.parseModule();
+  if (!moduleAstOpt) {
+    std::cout << moduleAstOpt.error().error(src) << "\n";
+    return 1;
+  }
+  auto moduleAst = *moduleAstOpt;
   llvm::outs() << "AST:\n";
   moduleAst.dump();
 

@@ -56,13 +56,14 @@ int runNyaZy(std::string src) {
 
   nyacc::Parser parser(*tokens);
   auto ast = parser.parseModule();
+  EXPECT_TRUE(ast) << ast.error().error(src) << "\n";
 
   mlir::MLIRContext context;
   context.getOrLoadDialect<nyacc::NyaZyDialect>();
   context.getOrLoadDialect<mlir::arith::ArithDialect>();
   context.getOrLoadDialect<mlir::LLVM::LLVMDialect>();
   context.getOrLoadDialect<mlir::func::FuncDialect>();
-  auto module = nyacc::MLIRGen::gen(context, ast);
+  auto module = nyacc::MLIRGen::gen(context, *ast);
 
   EXPECT_TRUE(mlir::succeeded(mlir::verify(*module)))
       << "Module verification failed:\n"

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ast.h"
+#include "error.h"
 #include "lexer.h"
 #include "scope.h"
 
@@ -11,21 +12,22 @@ public:
       : tokens_(std::move(tokens)), pos_(0),
         global_scope_(std::make_shared<Scope>()), scope_(global_scope_) {}
 
-  ModuleAST parseModule();
+  Result<ModuleAST> parseModule();
 
 private:
-  Stmt parseDeclare();
+  Result<Stmt> parseDeclare();
 
-  Expr parseExpr();
-  Expr parseAssign();
-  Expr parseCompare();
-  Expr parseAdd();
-  Expr parseMul();
-  Expr parseUnary();
-  Expr parsePostFix();
-  Expr parsePrimary();
+  Result<Expr> parseExpr();
+  Result<Expr> parseAssign();
+  Result<Expr> parseCompare();
+  Result<Expr> parseAdd();
+  Result<Expr> parseMul();
+  Result<Expr> parseUnary();
+  Result<Expr> parsePostFix();
+  Result<Expr> parsePrimary();
 
   bool startsWith(std::initializer_list<Token::TokenKind> list) const;
+  const Token &peek() const;
   std::vector<Token> tokens_;
   size_t pos_{0};
 
