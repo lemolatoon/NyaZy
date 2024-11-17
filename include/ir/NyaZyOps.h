@@ -18,6 +18,7 @@
 #include "mlir/Interfaces/VectorInterfaces.h"
 #include "mlir/IR/Attributes.h"
 #include "llvm/ADT/StringExtras.h"
+#include <mlir/Interfaces/DataLayoutInterfaces.h>
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -27,6 +28,7 @@
 #include "mlir/Interfaces/CastInterfaces.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 
 #include "ir/NyaZyOpsEnums.h"
 
