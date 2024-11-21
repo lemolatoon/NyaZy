@@ -8,7 +8,9 @@
 #include "gtest/gtest.h"
 #include <llvm/ExecutionEngine/Orc/LLJIT.h>
 #include <llvm/ExecutionEngine/Orc/ThreadSafeModule.h>
+#include <llvm/Support/Error.h>
 #include <llvm/Support/TargetSelect.h>
+#include <memory>
 #include <mlir/Dialect/Arith/IR/Arith.h>
 #include <mlir/Dialect/ControlFlow/IR/ControlFlow.h>
 #include <mlir/Dialect/Func/IR/FuncOps.h>
@@ -23,7 +25,14 @@
 #include <mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h>
 #include <mlir/Target/LLVMIR/Export.h>
 
-int runIR(std::unique_ptr<llvm::Module> &module) {
+#include <cstring>
+#include <iostream>
+#include <sstream>
+#include <sys/wait.h>
+#include <unistd.h>
+
+llvm::Expected<std::unique_ptr<llvm::orc::LLJIT>>
+createLLJIT(std::unique_ptr<llvm::Module> &module) {
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
   llvm::InitializeNativeTargetAsmParser();
@@ -40,6 +49,11 @@ int runIR(std::unique_ptr<llvm::Module> &module) {
   EXPECT_FALSE(err) << "Error adding module: " << llvm::toString(std::move(err))
                     << "\n";
 
+  return jit;
+}
+
+int runIR(std::unique_ptr<llvm::Module> &module) {
+  auto jit = createLLJIT(module);
   // Specify the entry point function name (e.g., "main")
   auto symbol = jit->get()->lookup("main");
   EXPECT_TRUE(!!symbol) << "Error looking up symbol: "
@@ -51,7 +65,61 @@ int runIR(std::unique_ptr<llvm::Module> &module) {
   return status;
 }
 
-int runNyaZy(std::string src) {
+std::string runIRWithCapturedOutput(std::unique_ptr<llvm::Module> &module) {
+  auto jit = createLLJIT(module);
+  // Specify the entry point function name (e.g., "main")
+  auto symbol = jit->get()->lookup("main");
+  EXPECT_TRUE(!!symbol) << "Error looking up symbol: "
+                        << llvm::toString(symbol.takeError()) << "\n";
+
+  auto mainFunction = symbol->toPtr<int (*)()>();
+
+  // Create a pipe for capturing stdout
+  int pipefd[2];
+  EXPECT_NE(pipe(pipefd), -1)
+      << "Error creating pipe: " << strerror(errno) << "\n";
+
+  // Fork the process
+  pid_t pid = fork();
+  EXPECT_NE(pid, -1) << "Error forking process: " << strerror(errno) << "\n";
+
+  if (pid == 0) {
+    // Child process
+    close(pipefd[0]);               // Close read end of the pipe
+    dup2(pipefd[1], STDOUT_FILENO); // Redirect stdout to the pipe
+    close(pipefd[1]);               // Close write end of the pipe
+
+    // Execute the main function
+    int status = mainFunction();
+    fflush(stdout); // Flush stdout
+    _exit(status);  // Exit the child process
+  } else {
+    // Parent process
+    close(pipefd[1]); // Close write end of the pipe
+
+    // Read the output from the pipe
+    std::stringstream buffer;
+    char readBuffer[128];
+    ssize_t bytesRead;
+    while ((bytesRead = read(pipefd[0], readBuffer, sizeof(readBuffer) - 1)) >
+           0) {
+      readBuffer[bytesRead] = '\0';
+      buffer << readBuffer;
+    }
+    close(pipefd[0]); // Close read end of the pipe
+
+    // Wait for the child process to finish
+    int status;
+    waitpid(pid, &status, 0);
+
+    // Return the captured output
+    return buffer.str();
+  }
+  return "";
+}
+
+std::unique_ptr<llvm::Module> createLLVMModule(const std::string src,
+                                               llvm::LLVMContext &llvmContext) {
   nyacc::Lexer lexer(src);
   auto tokens = lexer.tokenize();
 
@@ -85,14 +153,23 @@ int runNyaZy(std::string src) {
 
   mlir::registerBuiltinDialectTranslation(*module->getContext());
   mlir::registerLLVMDialectTranslation(*module->getContext());
-  llvm::LLVMContext llvmContext;
   auto llvmModule = mlir::translateModuleToLLVMIR(*module, llvmContext);
-  std::cerr << llvmModule << "\n";
   EXPECT_TRUE(llvmModule) << "Failed to emit LLVM IR:\n" << src << "\n";
-  llvmModule->dump();
 
+  return llvmModule;
+}
+
+int runNyaZy(std::string src) {
+  llvm::LLVMContext llvmContext;
+  auto llvmModule = createLLVMModule(src, llvmContext);
   return runIR(llvmModule);
 };
+
+std::string runNyaZyWithCapturedOutput(std::string src) {
+  llvm::LLVMContext llvmContext;
+  auto llvmModule = createLLVMModule(src, llvmContext);
+  return runIRWithCapturedOutput(llvmModule);
+}
 
 // テストケース
 TEST(SimpleTest, OneInteger) { EXPECT_EQ(123, runNyaZy("123")); }
@@ -144,6 +221,13 @@ TEST(SimpleTest, While) {
         }
         sum
       )"));
+}
+
+TEST(SimpleTest, PrintOp) {
+  EXPECT_EQ("124\n", runNyaZyWithCapturedOutput("print(123 + 1)"));
+  EXPECT_EQ("123\n456\n", runNyaZyWithCapturedOutput("print(123); print(456)"));
+  EXPECT_EQ("123\n456\n",
+            runNyaZyWithCapturedOutput("print(123); print(456); 0"));
 }
 
 // メイン関数
