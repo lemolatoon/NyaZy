@@ -95,7 +95,7 @@ Result<std::vector<Token>> Lexer::tokenize() {
         {'{', Token::TokenKind::OpenBrace},
         {'}', Token::TokenKind::CloseBrace},
         {';', Token::TokenKind::Semi},
-    };
+        {',', Token::TokenKind::Comma}};
 
     bool shouldContinue = false;
     for (const auto &[c, kind] : token_mapping) {

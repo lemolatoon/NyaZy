@@ -74,6 +74,29 @@ public:
                                      value_.value());
   }
 
+  void visit(const class nyacc::CallExpr &node) override {
+    auto loc = node.getLoc();
+    std::vector<mlir::Value> args;
+    for (auto &arg : node.getArgs()) {
+      arg->accept(*this);
+      if (has_error()) {
+        return;
+      }
+      args.push_back(value_.value());
+    }
+    if (node.getName() == "print") {
+      if (args.size() != 1) {
+        flag_ = FATAL(loc, "print() takes exactly 1 argument (", args.size(),
+                      " given)");
+        return;
+      }
+      builder_.create<nyacc::PrintOp>(mlirLoc(loc), args[0]);
+    } else {
+      // TODO
+      flag_ = FATAL(loc, "Unsupported Generic Call Function: ", node.getName());
+    }
+  }
+
   void visit(const class nyacc::DeclareStmt &node) override {
     node.getInitExpr()->accept(*this);
     if (has_error()) {

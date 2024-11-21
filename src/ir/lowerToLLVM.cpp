@@ -24,6 +24,8 @@
 #include <mlir/IR/PatternMatch.h>
 #include <mlir/Support/LLVM.h>
 #include <mlir/Support/TypeID.h>
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Conversion/LLVMCommon/Pattern.h"
 
 namespace {
 
@@ -321,7 +323,6 @@ struct WhileOpLowering : public mlir::OpConversionPattern<nyacc::WhileOp> {
   mlir::LogicalResult matchAndRewrite(
       nyacc::WhileOp op, OpAdaptor adaptor [[maybe_unused]],
       mlir::ConversionPatternRewriter &rewriter) const override {
-    std::cerr << "WhileOpLowering\n";
     // Clone the before and after regions
     auto& beforeRegion = op.getBefore();
     auto& afterRegion = op.getAfter();
@@ -349,7 +350,6 @@ struct ConditionOpLowering : public mlir::OpConversionPattern<nyacc::ConditionOp
   mlir::LogicalResult matchAndRewrite(
       nyacc::ConditionOp op, OpAdaptor adaptor,
       mlir::ConversionPatternRewriter &rewriter) const override {
-    std::cerr << "ConditionOpLowering\n";
     // Replace nyazy.condition with scf.condition
     rewriter.replaceOpWithNewOp<mlir::scf::ConditionOp>(
         op, adaptor.getCondition(), mlir::ValueRange{});
@@ -363,7 +363,6 @@ struct YieldOpLowering : public mlir::OpConversionPattern<nyacc::YieldOp> {
   mlir::LogicalResult matchAndRewrite(
       nyacc::YieldOp op, OpAdaptor adaptor [[maybe_unused]],
       mlir::ConversionPatternRewriter &rewriter) const override {
-    std::cerr << "YieldOpLowering\n";
     // Replace nyazy.yield with scf.yield
     rewriter.replaceOpWithNewOp<mlir::scf::YieldOp>(op);
     return mlir::success();
@@ -383,12 +382,88 @@ private:
   void runOnOperation() final;
 };
 
+// Lowering for nyazy.print -> LLVM printf
+struct PrintOpLowering : public mlir::OpConversionPattern<nyacc::PrintOp> {
+  using OpConversionPattern<nyacc::PrintOp>::OpConversionPattern;
+
+  mlir::LogicalResult matchAndRewrite(
+      nyacc::PrintOp op, OpAdaptor adaptor,
+      mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::Location loc = op.getLoc();
+    mlir::ModuleOp module = op->getParentOfType<mlir::ModuleOp>();
+    auto* ctx = module.getContext();
+
+    // Get the LLVM ptr type
+    auto ptrType = mlir::LLVM::LLVMPointerType::get(ctx);
+    // auto elmType = mlir::IntegerType::get(ctx, 8);
+
+    // Create format string global variable (if not existing)
+    mlir::LLVM::GlobalOp formatStr;
+    if (!(formatStr = module.lookupSymbol<mlir::LLVM::GlobalOp>("integer_format_specifier"))) {
+      mlir::ConversionPatternRewriter::InsertionGuard guard(rewriter);
+      mlir::Type charType = mlir::IntegerType::get(rewriter.getContext(), 8);
+      mlir::Type arrayType = mlir::LLVM::LLVMArrayType::get(charType, 4); // "%ld\0"
+      rewriter.setInsertionPointToStart(module.getBody());
+      formatStr = rewriter.create<mlir::LLVM::GlobalOp>(
+          loc, arrayType, /*isConstant=*/true, mlir::LLVM::Linkage::Internal,
+          "integer_format_specifier", mlir::StringAttr::get(rewriter.getContext(), "%ld\n"));
+    }
+
+    // Get pointer to the format string
+    mlir::Value formatStrPtr = rewriter.create<mlir::LLVM::AddressOfOp>(loc, formatStr);
+    mlir::Value zero = rewriter.create<mlir::LLVM::ConstantOp>(
+        loc, mlir::IntegerType::get(rewriter.getContext(), 64),
+        rewriter.getIntegerAttr(rewriter.getIntegerType(64), 0));
+    llvm::SmallVector<mlir::Value, 2> indices = {zero, zero};
+    formatStrPtr = rewriter.create<mlir::LLVM::GEPOp>(
+        loc, ptrType, formatStr.getType(), formatStrPtr, indices);
+
+    // Declare or get the printf function
+    mlir::LLVM::LLVMFuncOp printfFunc;
+    mlir::Type printfType = mlir::LLVM::LLVMFunctionType::get(
+        mlir::IntegerType::get(rewriter.getContext(), 32),
+        {ptrType}, /*isVarArg=*/true);
+    if (!(printfFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("printf"))) {
+      mlir::ConversionPatternRewriter::InsertionGuard guard(rewriter);
+      rewriter.setInsertionPointToStart(module.getBody());
+      printfFunc = rewriter.create<mlir::LLVM::LLVMFuncOp>(
+          loc, "printf", printfType);
+    }
+
+    // Convert the operand to LLVM type if necessary
+    auto value = adaptor.getOperand();
+    if (llvm::isa<mlir::IntegerType>(value.getType())) {
+      // value = typeConverter->materializeTargetConversion(
+      //     rewriter, loc, typeConverter->convertType(value.getType()), value);
+    } else {
+      // TODO: Support other types
+      return mlir::failure();
+    }
+
+    // Call printf
+    auto callop = rewriter.create<mlir::LLVM::CallOp>(
+        loc,
+        // printfType,
+        mlir::TypeRange{mlir::IntegerType::get(rewriter.getContext(), 32)},
+        mlir::SymbolRefAttr::get(printfFunc),
+        mlir::ValueRange{formatStrPtr, value}
+        );
+    
+    callop->setAttr("var_callee_type", mlir::TypeAttr::get(printfType));
+    
+    rewriter.eraseOp(op);
+
+    return mlir::success();
+  }
+};
+
 } // namespace
 
 void NyaZyToLLVMPass::runOnOperation() {
   mlir::ConversionTarget target(getContext());
   target.addLegalDialect<mlir::BuiltinDialect, mlir::LLVM::LLVMDialect, mlir::scf::SCFDialect, mlir::memref::MemRefDialect>();
   target.addIllegalDialect<nyacc::NyaZyDialect>();
+  target.addLegalOp<nyacc::PrintOp>();
 
   mlir::RewritePatternSet patterns(&getContext());
   // nyazy -> arith + func
@@ -396,7 +471,8 @@ void NyaZyToLLVMPass::runOnOperation() {
                AddOpLowering, SubOpLowering, MulOpLowering, DivOpLowering, 
                PosOpLowering, NegOpLowering, CmpOpLowering, CastOpLowering,
                AllocaOpLowering, LoadOpLowering, StoreOpLowering,
-               ConditionOpLowering, YieldOpLowering, WhileOpLowering>(
+               ConditionOpLowering, YieldOpLowering, WhileOpLowering
+               >(
       &getContext());
 
   // * -> llvm
@@ -413,12 +489,14 @@ void NyaZyToLLVMPass::runOnOperation() {
 
   // scf -> llvm
   mlir::ConversionTarget scfTarget(getContext());
+  mlir::LLVMTypeConverter scfTypeConverter(&getContext());
   scfTarget.addLegalDialect<mlir::BuiltinDialect, mlir::LLVM::LLVMDialect, mlir::memref::MemRefDialect>();
+  scfTarget.addLegalOp<nyacc::PrintOp>();
   scfTarget.addIllegalDialect<mlir::scf::SCFDialect>();
 
   mlir::RewritePatternSet scfPatterns(&getContext());
   mlir::populateSCFToControlFlowConversionPatterns(scfPatterns);
-  mlir::cf::populateControlFlowToLLVMConversionPatterns(typeConverter, scfPatterns);
+  mlir::cf::populateControlFlowToLLVMConversionPatterns(scfTypeConverter, scfPatterns);
 
   if (failed(
           applyFullConversion(getOperation(), scfTarget, std::move(scfPatterns)))) {
@@ -428,6 +506,7 @@ void NyaZyToLLVMPass::runOnOperation() {
   // memref -> llvm
   mlir::ConversionTarget target2(getContext());
   target2.addLegalDialect<mlir::BuiltinDialect, mlir::LLVM::LLVMDialect>();
+  target2.addLegalOp<nyacc::PrintOp>();
   target2.addIllegalDialect<mlir::memref::MemRefDialect>();
 
   mlir::RewritePatternSet patterns2(&getContext());
@@ -440,6 +519,20 @@ void NyaZyToLLVMPass::runOnOperation() {
           applyFullConversion(getOperation(), target2, std::move(patterns2)))) {
     signalPassFailure();
   }
+
+  // Lowering for nyazy.print -> LLVM printf
+  mlir::ConversionTarget printTarget(getContext());
+  printTarget.addLegalDialect<mlir::BuiltinDialect, mlir::LLVM::LLVMDialect>();
+  printTarget.addIllegalOp<nyacc::PrintOp>();
+
+  mlir::RewritePatternSet printPatterns(&getContext());
+  printPatterns.add<PrintOpLowering>(&getContext());
+
+  if (failed(
+          applyFullConversion(getOperation(), printTarget, std::move(printPatterns)))) {
+    signalPassFailure();
+  }
+
 }
 
 std::unique_ptr<mlir::Pass> nyacc::createNyaZyToLLVMPass() {

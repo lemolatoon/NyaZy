@@ -338,6 +338,22 @@ Result<Expr> Parser::parsePrimary() {
   case Token::TokenKind::Ident: {
     pos_++;
     std::string name{token.text()};
+    if (startsWith({Token::TokenKind::OpenParen})) {
+      pos_++;
+      std::vector<Expr> args;
+      while (!startsWith({Token::TokenKind::CloseParen})) {
+        auto arg = parseExpr();
+        if (!arg) {
+          return tl::unexpected{arg.error()};
+        }
+        args.emplace_back(std::move(*arg));
+        if (startsWith({Token::TokenKind::Comma})) {
+          pos_++;
+        }
+      }
+      pos_++;
+      return std::make_shared<CallExpr>(loc, name, std::move(args));
+    }
     auto declareStmt = scope_->lookup(name);
     if (!declareStmt) {
       return FATAL(token.getLoc(), "Variable '", name, "' not found. \n");

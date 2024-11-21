@@ -597,4 +597,17 @@ def YieldOp : NyaZyOp<"yield", [Pure, Terminator,
       [{  attr-dict  }];
 }
 
+def PrintOp : NyaZyOp<"print", []> {
+  let summary = "print operation";
+  let description = [{
+    The `print` operation prints the value of its operand to the standard output.
+    The operand can be of any type.
+  }];
+
+  let arguments = (ins AnyType:$operand);
+  let results = (outs);
+
+  let assemblyFormat = "$operand attr-dict `:` type($operand)";
+}
+
 #endif // NYAZY_OPS

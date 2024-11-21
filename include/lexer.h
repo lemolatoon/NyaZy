@@ -27,6 +27,7 @@ public:
     Lt,
     As,
     Semi,
+    Comma,
     Let,
     While,
     Eof,
@@ -51,6 +52,8 @@ public:
       return "OpenBrace";
     case TokenKind::CloseBrace:
       return "CloseBrace";
+    case TokenKind::Comma:
+      return "Comma";
     case TokenKind::Eof:
       return "Eof";
     case TokenKind::Eq:

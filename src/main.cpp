@@ -42,7 +42,9 @@ int main() {
   while (a < 10) { 
     a = a + 1; 
   } 
-  a
+  print(a);
+  print(a * 2);
+  0
 )";
   llvm::outs() << "Source code:\n";
   llvm::outs() << src;
