@@ -63,6 +63,6 @@ void AssignExpr::dump(int level) const {
 void VariableExpr::dump(int level) const {
   std::cout << std::string(level * 2, ' ') << "VariableExpr(" << name_
             << ") -> \n";
-  getExpr()->dump(level + 1);
+  // getExpr()->dump(level + 1);
 }
 } // namespace nyacc

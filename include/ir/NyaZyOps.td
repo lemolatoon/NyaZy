@@ -12,6 +12,7 @@ include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/CastInterfaces.td"
+include "mlir/Interfaces/MemorySlotInterfaces.td"
 
 // Almost taken from `arith.constant`
 
@@ -240,6 +241,173 @@ def ReturnOp : NyaZyOp<"return",
 
     let arguments = (ins AnyType:$operand);
     let results = (outs);
+}
+
+//===----------------------------------------------------------------------===//
+// AllocaOp
+//===----------------------------------------------------------------------===//
+
+def AllocaOp : NyaZyOp<"alloca", []> {
+  let summary = "stack memory allocation operation";
+  let description = [{
+    The `alloca` operation allocates memory on the stack, to be automatically
+    released when control transfers back from the region of its closest
+    surrounding operation with an
+    [`AutomaticAllocationScope`](../Traits.md/#automaticallocationscope) trait.
+    The amount of memory allocated is specified by its memref and additional
+    operands. For example:
+
+    ```mlir
+    %0 = memref.alloca() : memref<8x64xf32>
+    ```
+
+    The optional list of dimension operands are bound to the dynamic dimensions
+    specified in its memref type. In the example below, the SSA value '%d' is
+    bound to the second dimension of the memref (which is dynamic).
+
+    ```mlir
+    %0 = memref.alloca(%d) : memref<8x?xf32>
+    ```
+
+    The optional list of symbol operands are bound to the symbols of the
+    memref's affine map. In the example below, the SSA value '%s' is bound to
+    the symbol 's0' in the affine map specified in the allocs memref type.
+
+    ```mlir
+    %0 = memref.alloca()[%s] : memref<8x64xf32,
+                               affine_map<(d0, d1)[s0] -> ((d0 + s0), d1)>>
+    ```
+
+    This operation returns a single SSA value of memref type, which can be used
+    by subsequent load and store operations. An optional alignment attribute, if
+    specified, guarantees alignment at least to that boundary. If not specified,
+    an alignment on any convenient boundary compatible with the type will be
+    chosen.
+  }];
+
+
+  let arguments = (ins);
+  let results = (outs AnyMemRef:$memref);
+}
+
+def StoreOp : NyaZyOp<"store",
+     [TypesMatchWith<"type of 'value' matches element type of 'memref'",
+                     "memref", "value",
+                     "::llvm::cast<mlir::MemRefType>($_self).getElementType()">,]> {
+  let summary = "store operation";
+  let description = [{
+    Store a value to a memref location given by indices. The value stored should
+    have the same type as the elemental type of the memref. The number of
+    arguments provided within brackets need to match the rank of the memref.
+
+    In an affine context, the indices of a store are restricted to SSA values
+    bound to surrounding loop induction variables,
+    [symbols](Affine.md/#restrictions-on-dimensions-and-symbols), results of a
+    `constant` operation, or the result of an
+    [`affine.apply`](Affine.md/#affineapply-affineapplyop) operation that can in
+    turn take as arguments all of the aforementioned SSA values or the
+    recursively result of such an `affine.apply` operation.
+
+    Example:
+
+    ```mlir
+    memref.store %100, %A[%1, 1023] : memref<4x?xf32, #layout, memspace0>
+    ```
+
+    **Context:** The `load` and `store` operations are specifically crafted to
+    fully resolve a reference to an element of a memref, and (in polyhedral
+    `affine.if` and `affine.for` operations) the compiler can follow use-def
+    chains (e.g. through [`affine.apply`](Affine.md/#affineapply-affineapplyop)
+    operations) to precisely analyze references at compile-time using polyhedral
+    techniques. This is possible because of the
+    [restrictions on dimensions and symbols](Affine.md/#restrictions-on-dimensions-and-symbols)
+    in these contexts.
+  }];
+
+  let arguments = (ins AnyType:$value,
+                       Arg<AnyMemRef, "the reference to store to",
+                           [MemWrite]>:$memref);
+
+  // let builders = [
+  //   OpBuilder<(ins "mlir::Value":$valueToStore, "mlir::Value":$memref), [{
+  //     $_state.addOperands(valueToStore);
+  //     $_state.addOperands(memref);
+  //   }]>];
+
+  let extraClassDeclaration = [{
+      mlir::Value getValueToStore() { return getOperand(0); }
+
+      mlir::Value getMemRef() { return getOperand(1); }
+      void setMemRef(mlir::Value value) { setOperand(1, value); }
+      mlir::MemRefType getMemRefType() {
+        return ::llvm::cast<mlir::MemRefType>(getMemRef().getType());
+      }
+  }];
+  let assemblyFormat = [{
+    $value `,` $memref attr-dict `:` type($memref)
+  }];
+}
+
+
+//===----------------------------------------------------------------------===//
+// LoadOp
+//===----------------------------------------------------------------------===//
+
+def LoadOp : NyaZyOp<"load",
+     [TypesMatchWith<"result type matches element type of 'memref'",
+                     "memref", "result",
+                     "::llvm::cast<mlir::MemRefType>($_self).getElementType()">,]> {
+  let summary = "load operation";
+  let description = [{
+    The `load` op reads an element from a memref specified by an index list. The
+    output of load is a new value with the same type as the elements of the
+    memref. The arity of indices is the rank of the memref (i.e., if the memref
+    loaded from is of rank 3, then 3 indices are required for the load following
+    the memref identifier).
+
+    In an `affine.if` or `affine.for` body, the indices of a load are restricted
+    to SSA values bound to surrounding loop induction variables,
+    [symbols](Affine.md/#dimensions-and-symbols), results of a
+    constant operations, or the result of an
+    `affine.apply` operation that can in turn take as arguments all of the
+    aforementioned SSA values or the recursively result of such an
+    `affine.apply` operation.
+
+    Example:
+
+    ```mlir
+    %1 = affine.apply affine_map<(d0, d1) -> (3*d0)> (%i, %j)
+    %2 = affine.apply affine_map<(d0, d1) -> (d1+1)> (%i, %j)
+    %12 = memref.load %A[%1, %2] : memref<8x?xi32, #layout, memspace0>
+
+    // Example of an indirect load (treated as non-affine)
+    %3 = affine.apply affine_map<(d0) -> (2*d0 + 1)>(%12)
+    %13 = memref.load %A[%3, %2] : memref<4x?xi32, #layout, memspace0>
+    ```
+
+    **Context:** The `load` and `store` operations are specifically crafted to
+    fully resolve a reference to an element of a memref, and (in affine
+    `affine.if` and `affine.for` operations) the compiler can follow use-def
+    chains (e.g. through [`affine.apply`](Affine.md/#affineapply-affineapplyop)
+    operations) to precisely analyze references at compile-time using polyhedral
+    techniques. This is possible because of the
+    [restrictions on dimensions and symbols](Affine.md/#restrictions-on-dimensions-and-symbols)
+    in these contexts.
+  }];
+
+  let arguments = (ins Arg<AnyMemRef, "the reference to load from",
+                           [MemRead]>:$memref);
+  let results = (outs AnyType:$result);
+
+  let extraClassDeclaration = [{
+    mlir::Value getMemRef() { return getOperand(); }
+    void setMemRef(mlir::Value value) { setOperand(value); }
+    mlir::MemRefType getMemRefType() {
+      return ::llvm::cast<mlir::MemRefType>(getMemRef().getType());
+    }
+  }];
+
+  let assemblyFormat = "$memref attr-dict `:` type($memref)";
 }
 
 #endif // NYAZY_OPS

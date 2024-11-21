@@ -59,8 +59,10 @@ Result<Stmt> Parser::parseDeclare() {
   EXPECT_EQ(peek().getLoc(), peek().getKind(), Token::TokenKind::Semi);
   pos_++;
 
-  scope_->insert(name, *expr);
-  return std::make_shared<DeclareStmt>(loc, std::move(name), std::move(*expr));
+  auto stmt = std::make_shared<DeclareStmt>(loc, name, std::move(*expr));
+  scope_->insert(std::move(name), stmt);
+
+  return stmt;
 }
 
 Result<Expr> Parser::parseExpr() { return parseAssign(); }
@@ -73,13 +75,13 @@ Result<Expr> Parser::parseAssign() {
   }
   if (startsWith({Token::TokenKind::Eq})) {
     pos_++;
-    assert(llvm::isa<VariableExpr>(lhs->get()));
+    EXPECT_TRUE(loc, llvm::isa<VariableExpr>(lhs->get()));
     auto rhs = parseCompare();
     if (!rhs) {
       return rhs;
     }
     auto var_expr = llvm::cast<VariableExpr>(lhs->get());
-    scope_->insert(var_expr->getName(), *rhs);
+    EXPECT_TRUE(loc, scope_->lookup(var_expr->getName()).has_value());
     return std::make_shared<AssignExpr>(loc, std::move(*lhs), std::move(*rhs));
   }
 
@@ -267,11 +269,11 @@ Result<Expr> Parser::parsePrimary() {
   case Token::TokenKind::Ident: {
     pos_++;
     std::string name{token.text()};
-    auto expr = scope_->lookup(name);
-    if (!expr) {
+    auto declareStmt = scope_->lookup(name);
+    if (!declareStmt) {
       return FATAL(token.getLoc(), "Variable '", name, "' not found. \n");
     }
-    return std::make_shared<VariableExpr>(loc, name, *expr);
+    return std::make_shared<VariableExpr>(loc, name, *declareStmt);
   }
   default:
     return FATAL(token.getLoc(), "Unexpected token: ", token, "\n");

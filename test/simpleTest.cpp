@@ -12,6 +12,7 @@
 #include <mlir/Dialect/Arith/IR/Arith.h>
 #include <mlir/Dialect/Func/IR/FuncOps.h>
 #include <mlir/Dialect/LLVMIR/LLVMDialect.h>
+#include <mlir/Dialect/MemRef/IR/MemRef.h>
 #include <mlir/IR/MLIRContext.h>
 #include <mlir/IR/Verifier.h>
 #include <mlir/Pass/PassManager.h>
@@ -63,6 +64,7 @@ int runNyaZy(std::string src) {
   context.getOrLoadDialect<mlir::arith::ArithDialect>();
   context.getOrLoadDialect<mlir::LLVM::LLVMDialect>();
   context.getOrLoadDialect<mlir::func::FuncDialect>();
+  context.getOrLoadDialect<mlir::memref::MemRefDialect>();
   auto moduleOpt = nyacc::MLIRGen::gen(context, *ast);
   EXPECT_TRUE(moduleOpt) << moduleOpt.error().error(src) << "\n";
   auto &module = *moduleOpt;
@@ -115,6 +117,10 @@ TEST(SimpleTest, Variable) {
 
   EXPECT_EQ(8, runNyaZy("let a = 5; let b = 3; a + b"));
 
+  // assign
+  EXPECT_EQ(7, runNyaZy("let a = 5; a = 7; a"));
+  // assign using self
+  EXPECT_EQ(12, runNyaZy("let a = 5; a = a + 7; a"));
   // shadowing
   EXPECT_EQ(12, runNyaZy("let a = 5; let a = a + 7; a"));
 }

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "expr.h"
-#include "scope.h"
 #include "types.h"
 #include <cstdint>
 #include <error.h>
@@ -194,9 +193,10 @@ private:
 
 class VariableExpr : public ExprASTNode {
 public:
-  VariableExpr(Location loc, std::string name, Expr expr)
+  VariableExpr(Location loc, std::string name,
+               std::shared_ptr<DeclareStmt> declareStmt)
       : ExprASTNode(loc, ExprKind::Variable), name_(std::move(name)),
-        expr_(std::move(expr)) {}
+        declareStmt_(std::move(declareStmt)) {}
   void accept(Visitor &v) override { v.visit(*this); }
 
   static bool classof(const ExprASTNode *node) {
@@ -204,12 +204,14 @@ public:
   }
 
   void dump(int level) const override;
-  const Expr &getExpr() const { return expr_; }
+  const std::shared_ptr<DeclareStmt> &getDeclareStmt() const {
+    return declareStmt_;
+  }
   const std::string &getName() const { return name_; }
 
 private:
   std::string name_;
-  Expr expr_;
+  std::shared_ptr<DeclareStmt> declareStmt_;
 };
 
 class StmtASTNode {
