@@ -13,8 +13,10 @@
 #include <llvm/Support/TargetSelect.h>
 #include <llvm/Support/raw_ostream.h>
 #include <mlir/Dialect/Arith/IR/Arith.h>
+#include <mlir/Dialect/ControlFlow/IR/ControlFlow.h>
 #include <mlir/Dialect/Func/IR/FuncOps.h>
 #include <mlir/Dialect/MemRef/IR/MemRef.h>
+#include <mlir/Dialect/SCF/IR/SCF.h>
 #include <mlir/ExecutionEngine/ExecutionEngine.h>
 #include <mlir/ExecutionEngine/OptUtils.h>
 #include <mlir/IR/OperationSupport.h>
@@ -36,12 +38,11 @@
 
 int main() {
   std::string src = R"(
-  {
-    let a = (3 == 3) as i64;
-    let b = a + 9 + 3;
-    let a = a * 2;
-    a * 3 * b
-  }
+  let a = 0; 
+  while (a < 10) { 
+    a = a + 1; 
+  } 
+  a
 )";
   llvm::outs() << "Source code:\n";
   llvm::outs() << src;
@@ -73,6 +74,8 @@ int main() {
   context.getOrLoadDialect<mlir::memref::MemRefDialect>();
   context.getOrLoadDialect<mlir::LLVM::LLVMDialect>();
   context.getOrLoadDialect<mlir::func::FuncDialect>();
+  context.getOrLoadDialect<mlir::scf::SCFDialect>();
+  context.getOrLoadDialect<mlir::cf::ControlFlowDialect>();
   auto moduleOpt = nyacc::MLIRGen::gen(context, moduleAst);
   if (!moduleOpt) {
     std::cout << moduleOpt.error().error(src) << "\n";

@@ -34,6 +34,15 @@ void ExprStmt::dump(int level) const {
   std::cout << std::string(level * 2, ' ') << ")\n";
 }
 
+void WhileStmt::dump(int level) const {
+  std::cout << std::string(level * 2, ' ') << "WhileStmt(\n";
+  std::cout << std::string((level + 1) * 2, ' ') << "Cond:\n";
+  getCond()->dump(level + 1);
+  std::cout << std::string((level + 1) * 2, ' ') << "Body:\n";
+  getBody()->dump(level + 1);
+  std::cout << std::string(level * 2, ' ') << ")\n";
+}
+
 void NumLitExpr::dump(int level) const {
   std::cout << std::string(level * 2, ' ') << "NumLitExpr(" << value_ << ")\n";
 }

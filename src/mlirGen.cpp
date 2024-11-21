@@ -8,6 +8,7 @@
 #include <error.h>
 #include <iostream>
 #include <mlir/Dialect/Func/IR/FuncOps.h>
+#include <mlir/Dialect/SCF/IR/SCF.h>
 #include <mlir/IR/BuiltinTypes.h>
 #include <mlir/IR/Location.h>
 #include <variant>
@@ -89,6 +90,39 @@ public:
     node.getExpr()->accept(*this);
     if (has_error()) {
       return;
+    }
+  }
+
+  void visit(const class nyacc::WhileStmt &node) override {
+    auto loc = mlirLoc(node.getLoc());
+    auto condLoc = mlirLoc(node.getCond()->getLoc());
+    auto bodyLoc = mlirLoc(node.getBody()->getLoc());
+
+    auto whileOp = builder_.create<nyacc::WhileOp>(loc);
+    auto &beforeBlock = whileOp.getBefore().emplaceBlock();
+    auto &afterBlock = whileOp.getAfter().emplaceBlock();
+
+    // Condition
+    {
+      mlir::OpBuilder::InsertionGuard guard(builder_);
+      builder_.setInsertionPointToEnd(&beforeBlock);
+      node.getCond()->accept(*this);
+      if (has_error()) {
+        return;
+      }
+      auto cond = value_.value();
+      builder_.create<nyacc::ConditionOp>(condLoc, cond);
+    }
+
+    // Body
+    {
+      mlir::OpBuilder::InsertionGuard guard(builder_);
+      builder_.setInsertionPointToStart(&afterBlock);
+      node.getBody()->accept(*this);
+      if (has_error()) {
+        return;
+      }
+      builder_.create<nyacc::YieldOp>(bodyLoc);
     }
   }
 

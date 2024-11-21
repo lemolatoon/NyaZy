@@ -15,7 +15,9 @@ public:
   Result<ModuleAST> parseModule();
 
 private:
+  Result<Stmt> parseStmt();
   Result<Stmt> parseDeclare();
+  Result<Stmt> parseWhile();
 
   Result<Expr> parseExpr();
   Result<Expr> parseAssign();
@@ -27,6 +29,7 @@ private:
   Result<Expr> parsePrimary();
 
   bool startsWith(std::initializer_list<Token::TokenKind> list) const;
+  bool startsWithStmt() const;
   const Token &peek() const;
   std::vector<Token> tokens_;
   size_t pos_{0};

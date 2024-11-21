@@ -13,6 +13,7 @@ public:
   virtual void visit(const class ModuleAST &node) = 0;
   virtual void visit(const class DeclareStmt &node) = 0;
   virtual void visit(const class ExprStmt &node) = 0;
+  virtual void visit(const class WhileStmt &node) = 0;
   virtual void visit(const class NumLitExpr &node) = 0;
   virtual void visit(const class BinaryExpr &node) = 0;
   virtual void visit(const class CastExpr &node) = 0;
@@ -241,6 +242,7 @@ public:
   enum class StmtKind {
     Declare,
     Expr,
+    While,
   };
   explicit StmtASTNode(Location loc, StmtKind kind) : kind_(kind), loc_(loc) {}
   virtual ~StmtASTNode() = default;
@@ -287,6 +289,25 @@ public:
 
 private:
   Expr expr_;
+};
+
+class WhileStmt : public StmtASTNode {
+public:
+  WhileStmt(Location loc, Expr cond, Expr body)
+      : StmtASTNode(loc, StmtKind::While), cond_(std::move(cond)),
+        body_(std::move(body)) {}
+  static bool classof(const StmtASTNode *node) {
+    return node->getKind() == StmtKind::While;
+  }
+
+  void dump(int level) const override;
+  void accept(Visitor &v) override { v.visit(*this); }
+  const Expr &getCond() const { return cond_; }
+  const Expr &getBody() const { return body_; }
+
+private:
+  Expr cond_;
+  Expr body_;
 };
 
 class ModuleAST {
