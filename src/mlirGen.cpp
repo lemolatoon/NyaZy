@@ -36,7 +36,7 @@ public:
   MLIRGenVisitor(mlir::MLIRContext &context)
       : builder_(&context),
         module_(mlir::ModuleOp::create(builder_.getUnknownLoc())),
-        value_(std::nullopt), flag_(std::monostate{}) {
+        value_(std::nullopt), variableMap_(), flag_(std::monostate{}) {
     builder_.setInsertionPointToStart(module_.getBody());
   }
 
@@ -73,7 +73,18 @@ public:
                                      value_.value());
   }
 
-  void visit(const class nyacc::DeclareStmt &node [[maybe_unused]]) override {}
+  void visit(const class nyacc::DeclareStmt &node) override {
+    node.getInitExpr()->accept(*this);
+    if (has_error()) {
+      return;
+    }
+    auto init = value_.value();
+    auto memrefType = mlir::MemRefType::get({}, init.getType());
+    auto memref =
+        builder_.create<nyacc::AllocaOp>(mlirLoc(node.getLoc()), memrefType);
+    builder_.create<nyacc::StoreOp>(mlirLoc(node.getLoc()), init, memref);
+    variableMap_.insert({&node, memref});
+  }
   void visit(const class nyacc::ExprStmt &node) override {
     node.getExpr()->accept(*this);
     if (has_error()) {
@@ -184,14 +195,25 @@ public:
     }
   }
   void visit(const class nyacc::VariableExpr &node) override {
-    node.getExpr()->accept(*this);
+    auto memref = variableMap_.at(node.getDeclareStmt().get());
+    value_ = builder_.create<nyacc::LoadOp>(mlirLoc(node.getLoc()), memref);
+  }
+
+  void visit(const class nyacc::AssignExpr &node) override {
+    auto loc = node.getLoc();
+    node.getRhs()->accept(*this);
     if (has_error()) {
       return;
     }
-  }
+    auto rhs = value_.value();
+    if (!llvm::isa<nyacc::VariableExpr>(node.getLhs().get())) {
+      flag_ = FATAL(loc, "Left hand side of assignment must be a variable\n");
+      return;
+    }
+    auto var_lhs = llvm::cast<nyacc::VariableExpr>(node.getLhs().get());
+    auto memref = variableMap_.at(var_lhs->getDeclareStmt().get());
 
-  void visit(const class nyacc::AssignExpr &node [[maybe_unused]]) override {
-    // noop
+    builder_.create<nyacc::StoreOp>(mlirLoc(loc), rhs, memref);
   }
 
 private:
@@ -206,6 +228,7 @@ private:
   mlir::OpBuilder builder_;
   mlir::ModuleOp module_;
   std::optional<mlir::Value> value_;
+  std::map<const nyacc::DeclareStmt *, mlir::Value> variableMap_;
   nyacc::Result<std::monostate> flag_;
 };
 

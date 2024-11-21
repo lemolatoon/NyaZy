@@ -11,6 +11,7 @@
 #include <iostream>
 #include <llvm/Support/raw_ostream.h>
 #include <mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h>
+#include <mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h>
 #include <mlir/Dialect/LLVMIR/LLVMDialect.h>
 #include <mlir/Dialect/LLVMIR/LLVMTypes.h>
 #include <mlir/IR/Builders.h>
@@ -268,6 +269,50 @@ struct FuncOpLowering : public mlir::OpConversionPattern<nyacc::FuncOp> {
   }
 };
 
+// Lowering for nyazy.alloca -> memref.alloca
+struct AllocaOpLowering : public mlir::OpConversionPattern<nyacc::AllocaOp> {
+  using OpConversionPattern<nyacc::AllocaOp>::OpConversionPattern;
+
+  mlir::LogicalResult matchAndRewrite(
+      nyacc::AllocaOp op, OpAdaptor adaptor [[maybe_unused]],
+      mlir::ConversionPatternRewriter &rewriter) const final {
+    if (!llvm::isa<mlir::MemRefType>(op.getType())) {
+      return mlir::failure();
+    }
+    auto memrefType = llvm::cast<mlir::MemRefType>(op.getType());
+    rewriter.replaceOpWithNewOp<mlir::memref::AllocaOp>(op, memrefType);
+    return mlir::success();
+  }
+};
+
+// Lowering for nyazy.load -> memref.load
+struct LoadOpLowering : public mlir::OpConversionPattern<nyacc::LoadOp> {
+  using OpConversionPattern<nyacc::LoadOp>::OpConversionPattern;
+
+  mlir::LogicalResult matchAndRewrite(
+      nyacc::LoadOp op, OpAdaptor adaptor,
+      mlir::ConversionPatternRewriter &rewriter) const final {
+    auto op2 = rewriter.replaceOpWithNewOp<mlir::memref::LoadOp>(
+        op, adaptor.getMemref());
+    llvm::errs() << "LoadOpLowering: \n";
+    op2.print(llvm::errs());
+    return mlir::success();
+  }
+};
+
+// Lowering for nyazy.store -> memref.store
+struct StoreOpLowering : public mlir::OpConversionPattern<nyacc::StoreOp> {
+  using OpConversionPattern<nyacc::StoreOp>::OpConversionPattern;
+
+  mlir::LogicalResult matchAndRewrite(
+      nyacc::StoreOp op, OpAdaptor adaptor,
+      mlir::ConversionPatternRewriter &rewriter) const final {
+    rewriter.replaceOpWithNewOp<mlir::memref::StoreOp>(
+        op, adaptor.getValue(), adaptor.getMemref());
+    return mlir::success();
+  }
+};
+
 class NyaZyToLLVMPass
     : public mlir::PassWrapper<NyaZyToLLVMPass,
                                mlir::OperationPass<mlir::ModuleOp>> {
@@ -285,13 +330,15 @@ private:
 
 void NyaZyToLLVMPass::runOnOperation() {
   mlir::ConversionTarget target(getContext());
-  target.addLegalDialect<mlir::BuiltinDialect, mlir::LLVM::LLVMDialect>();
+  target.addLegalDialect<mlir::BuiltinDialect, mlir::LLVM::LLVMDialect, mlir::memref::MemRefDialect>();
   target.addIllegalDialect<nyacc::NyaZyDialect>();
 
   mlir::RewritePatternSet patterns(&getContext());
   // nyazy -> arith + func
   patterns.add<ConstantOpLowering, FuncOpLowering, ReturnOpLowering,
-               AddOpLowering, SubOpLowering, MulOpLowering, DivOpLowering, PosOpLowering, NegOpLowering, CmpOpLowering, CastOpLowering>(
+               AddOpLowering, SubOpLowering, MulOpLowering, DivOpLowering, 
+               PosOpLowering, NegOpLowering, CmpOpLowering, CastOpLowering,
+               AllocaOpLowering, LoadOpLowering, StoreOpLowering>(
       &getContext());
 
   // * -> llvm
@@ -301,6 +348,22 @@ void NyaZyToLLVMPass::runOnOperation() {
 
   if (failed(
           applyFullConversion(getOperation(), target, std::move(patterns)))) {
+    signalPassFailure();
+  }
+
+  // memref -> llvm
+  mlir::ConversionTarget target2(getContext());
+  target2.addLegalDialect<mlir::BuiltinDialect, mlir::LLVM::LLVMDialect>();
+  target2.addIllegalDialect<mlir::memref::MemRefDialect>();
+
+  mlir::RewritePatternSet patterns2(&getContext());
+
+  mlir::LLVMTypeConverter typeConverter2(&getContext());
+
+  mlir::populateFinalizeMemRefToLLVMConversionPatterns(typeConverter2, patterns2);
+
+  if (failed(
+          applyFullConversion(getOperation(), target2, std::move(patterns2)))) {
     signalPassFailure();
   }
 }

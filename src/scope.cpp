@@ -1,9 +1,11 @@
 #include "scope.h"
+#include "ast.h"
 #include <iostream>
 
 namespace nyacc {
 
-std::optional<Expr> Scope::lookup(const std::string &name) {
+std::optional<std::shared_ptr<DeclareStmt>>
+Scope::lookup(const std::string &name) {
   if (auto v = localLookup(name)) {
     return *v;
   }
@@ -15,11 +17,12 @@ std::optional<Expr> Scope::lookup(const std::string &name) {
   return std::nullopt;
 }
 
-void Scope::insert(std::string name, Expr expr) {
-  ident_map_.insert_or_assign(name, expr);
+void Scope::insert(std::string name, std::shared_ptr<DeclareStmt> stmt) {
+  ident_map_.insert_or_assign(name, stmt);
 }
 
-std::optional<Expr> Scope::localLookup(const std::string &name) {
+std::optional<std::shared_ptr<DeclareStmt>>
+Scope::localLookup(const std::string &name) {
   auto it = ident_map_.find(name);
   if (it == ident_map_.end()) {
     return std::nullopt;
