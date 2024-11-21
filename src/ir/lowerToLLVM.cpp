@@ -12,8 +12,12 @@
 #include <llvm/Support/raw_ostream.h>
 #include <mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h>
 #include <mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h>
+#include <mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h>
+#include <mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h>
 #include <mlir/Dialect/LLVMIR/LLVMDialect.h>
 #include <mlir/Dialect/LLVMIR/LLVMTypes.h>
+#include <mlir/Dialect/MemRef/IR/MemRef.h>
+#include <mlir/Dialect/SCF/IR/SCF.h>
 #include <mlir/IR/Builders.h>
 #include <mlir/IR/BuiltinAttributes.h>
 #include <mlir/IR/Operation.h>
@@ -292,10 +296,8 @@ struct LoadOpLowering : public mlir::OpConversionPattern<nyacc::LoadOp> {
   mlir::LogicalResult matchAndRewrite(
       nyacc::LoadOp op, OpAdaptor adaptor,
       mlir::ConversionPatternRewriter &rewriter) const final {
-    auto op2 = rewriter.replaceOpWithNewOp<mlir::memref::LoadOp>(
+    rewriter.replaceOpWithNewOp<mlir::memref::LoadOp>(
         op, adaptor.getMemref());
-    llvm::errs() << "LoadOpLowering: \n";
-    op2.print(llvm::errs());
     return mlir::success();
   }
 };
@@ -309,6 +311,61 @@ struct StoreOpLowering : public mlir::OpConversionPattern<nyacc::StoreOp> {
       mlir::ConversionPatternRewriter &rewriter) const final {
     rewriter.replaceOpWithNewOp<mlir::memref::StoreOp>(
         op, adaptor.getValue(), adaptor.getMemref());
+    return mlir::success();
+  }
+};
+
+struct WhileOpLowering : public mlir::OpConversionPattern<nyacc::WhileOp> {
+  using OpConversionPattern<nyacc::WhileOp>::OpConversionPattern;
+
+  mlir::LogicalResult matchAndRewrite(
+      nyacc::WhileOp op, OpAdaptor adaptor [[maybe_unused]],
+      mlir::ConversionPatternRewriter &rewriter) const override {
+    std::cerr << "WhileOpLowering\n";
+    // Clone the before and after regions
+    auto& beforeRegion = op.getBefore();
+    auto& afterRegion = op.getAfter();
+
+    // Create the scf.while operation
+    auto scfWhileOp = rewriter.create<mlir::scf::WhileOp>(
+        op.getLoc(), mlir::TypeRange{}, mlir::ValueRange{});
+
+    rewriter.inlineRegionBefore(beforeRegion, scfWhileOp.getBefore(),
+                                scfWhileOp.getBefore().end());
+
+    rewriter.inlineRegionBefore(afterRegion, scfWhileOp.getAfter(),
+                                scfWhileOp.getAfter().end());
+
+    // Erase the original operation
+    rewriter.eraseOp(op);
+
+    return mlir::success();
+  }
+};
+
+struct ConditionOpLowering : public mlir::OpConversionPattern<nyacc::ConditionOp> {
+  using OpConversionPattern<nyacc::ConditionOp>::OpConversionPattern;
+
+  mlir::LogicalResult matchAndRewrite(
+      nyacc::ConditionOp op, OpAdaptor adaptor,
+      mlir::ConversionPatternRewriter &rewriter) const override {
+    std::cerr << "ConditionOpLowering\n";
+    // Replace nyazy.condition with scf.condition
+    rewriter.replaceOpWithNewOp<mlir::scf::ConditionOp>(
+        op, adaptor.getCondition(), mlir::ValueRange{});
+    return mlir::success();
+  }
+};
+
+struct YieldOpLowering : public mlir::OpConversionPattern<nyacc::YieldOp> {
+  using OpConversionPattern<nyacc::YieldOp>::OpConversionPattern;
+
+  mlir::LogicalResult matchAndRewrite(
+      nyacc::YieldOp op, OpAdaptor adaptor [[maybe_unused]],
+      mlir::ConversionPatternRewriter &rewriter) const override {
+    std::cerr << "YieldOpLowering\n";
+    // Replace nyazy.yield with scf.yield
+    rewriter.replaceOpWithNewOp<mlir::scf::YieldOp>(op);
     return mlir::success();
   }
 };
@@ -330,7 +387,7 @@ private:
 
 void NyaZyToLLVMPass::runOnOperation() {
   mlir::ConversionTarget target(getContext());
-  target.addLegalDialect<mlir::BuiltinDialect, mlir::LLVM::LLVMDialect, mlir::memref::MemRefDialect>();
+  target.addLegalDialect<mlir::BuiltinDialect, mlir::LLVM::LLVMDialect, mlir::scf::SCFDialect, mlir::memref::MemRefDialect>();
   target.addIllegalDialect<nyacc::NyaZyDialect>();
 
   mlir::RewritePatternSet patterns(&getContext());
@@ -338,16 +395,33 @@ void NyaZyToLLVMPass::runOnOperation() {
   patterns.add<ConstantOpLowering, FuncOpLowering, ReturnOpLowering,
                AddOpLowering, SubOpLowering, MulOpLowering, DivOpLowering, 
                PosOpLowering, NegOpLowering, CmpOpLowering, CastOpLowering,
-               AllocaOpLowering, LoadOpLowering, StoreOpLowering>(
+               AllocaOpLowering, LoadOpLowering, StoreOpLowering,
+               ConditionOpLowering, YieldOpLowering, WhileOpLowering>(
       &getContext());
 
   // * -> llvm
   mlir::LLVMTypeConverter typeConverter(&getContext());
   mlir::arith::populateArithToLLVMConversionPatterns(typeConverter, patterns);
   mlir::populateFuncToLLVMConversionPatterns(typeConverter, patterns);
+  mlir::populateSCFToControlFlowConversionPatterns(patterns);
+  mlir::cf::populateControlFlowToLLVMConversionPatterns(typeConverter, patterns);
 
   if (failed(
           applyFullConversion(getOperation(), target, std::move(patterns)))) {
+    signalPassFailure();
+  }
+
+  // scf -> llvm
+  mlir::ConversionTarget scfTarget(getContext());
+  scfTarget.addLegalDialect<mlir::BuiltinDialect, mlir::LLVM::LLVMDialect, mlir::memref::MemRefDialect>();
+  scfTarget.addIllegalDialect<mlir::scf::SCFDialect>();
+
+  mlir::RewritePatternSet scfPatterns(&getContext());
+  mlir::populateSCFToControlFlowConversionPatterns(scfPatterns);
+  mlir::cf::populateControlFlowToLLVMConversionPatterns(typeConverter, scfPatterns);
+
+  if (failed(
+          applyFullConversion(getOperation(), scfTarget, std::move(scfPatterns)))) {
     signalPassFailure();
   }
 

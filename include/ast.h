@@ -13,12 +13,14 @@ public:
   virtual void visit(const class ModuleAST &node) = 0;
   virtual void visit(const class DeclareStmt &node) = 0;
   virtual void visit(const class ExprStmt &node) = 0;
+  virtual void visit(const class WhileStmt &node) = 0;
   virtual void visit(const class NumLitExpr &node) = 0;
   virtual void visit(const class BinaryExpr &node) = 0;
   virtual void visit(const class CastExpr &node) = 0;
   virtual void visit(const class UnaryExpr &node) = 0;
   virtual void visit(const class VariableExpr &node) = 0;
   virtual void visit(const class AssignExpr &node) = 0;
+  virtual void visit(const class BlockExpr &node) = 0;
 };
 
 class ExprASTNode {
@@ -30,6 +32,7 @@ public:
     Binary,
     Variable,
     Assign,
+    Block,
   };
   explicit ExprASTNode(Location loc, ExprKind kind) : kind_(kind), loc_(loc) {}
   virtual ~ExprASTNode() = default;
@@ -41,6 +44,26 @@ public:
 private:
   ExprKind kind_;
   Location loc_;
+};
+
+class BlockExpr : public ExprASTNode {
+public:
+  BlockExpr(Location loc, std::vector<Stmt> stmts, Expr expr)
+      : ExprASTNode(loc, ExprKind::Block), stmts_(std::move(stmts)),
+        expr_(std::move(expr)) {}
+  void accept(Visitor &v) override { v.visit(*this); }
+  const std::vector<Stmt> &getStmts() const { return stmts_; }
+  const Expr &getExpr() const { return expr_; }
+
+  static bool classof(const ExprASTNode *node) {
+    return node->getKind() == ExprKind::Block;
+  }
+
+  void dump(int level) const override;
+
+private:
+  std::vector<Stmt> stmts_;
+  Expr expr_;
 };
 
 class NumLitExpr : public ExprASTNode {
@@ -219,6 +242,7 @@ public:
   enum class StmtKind {
     Declare,
     Expr,
+    While,
   };
   explicit StmtASTNode(Location loc, StmtKind kind) : kind_(kind), loc_(loc) {}
   virtual ~StmtASTNode() = default;
@@ -265,6 +289,25 @@ public:
 
 private:
   Expr expr_;
+};
+
+class WhileStmt : public StmtASTNode {
+public:
+  WhileStmt(Location loc, Expr cond, Expr body)
+      : StmtASTNode(loc, StmtKind::While), cond_(std::move(cond)),
+        body_(std::move(body)) {}
+  static bool classof(const StmtASTNode *node) {
+    return node->getKind() == StmtKind::While;
+  }
+
+  void dump(int level) const override;
+  void accept(Visitor &v) override { v.visit(*this); }
+  const Expr &getCond() const { return cond_; }
+  const Expr &getBody() const { return body_; }
+
+private:
+  Expr cond_;
+  Expr body_;
 };
 
 class ModuleAST {

@@ -11,6 +11,16 @@ void ModuleAST::dump(int level) const {
   getExpr()->dump(level + 1);
 }
 
+void BlockExpr::dump(int level) const {
+  std::cout << std::string(level * 2, ' ') << "BlockExpr(\n";
+  for (auto &stmt : getStmts()) {
+    stmt->dump(level + 1);
+  }
+  std::cout << std::string(level * 2, ' ') << "Expr:\n";
+  getExpr()->dump(level + 1);
+  std::cout << std::string(level * 2, ' ') << ")\n";
+}
+
 void DeclareStmt::dump(int level) const {
   std::cout << std::string(level * 2, ' ') << "DeclareStmt(" << name_
             << " = \n";
@@ -21,6 +31,15 @@ void DeclareStmt::dump(int level) const {
 void ExprStmt::dump(int level) const {
   std::cout << std::string(level * 2, ' ') << "ExprStmt(\n";
   getExpr()->dump(level + 1);
+  std::cout << std::string(level * 2, ' ') << ")\n";
+}
+
+void WhileStmt::dump(int level) const {
+  std::cout << std::string(level * 2, ' ') << "WhileStmt(\n";
+  std::cout << std::string((level + 1) * 2, ' ') << "Cond:\n";
+  getCond()->dump(level + 1);
+  std::cout << std::string((level + 1) * 2, ' ') << "Body:\n";
+  getBody()->dump(level + 1);
   std::cout << std::string(level * 2, ' ') << ")\n";
 }
 

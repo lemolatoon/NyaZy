@@ -3,6 +3,7 @@
 #include <charconv>
 #include <error.h>
 #include <initializer_list>
+#include <ios>
 #include <iostream>
 #include <llvm/Support/Casting.h>
 #include <memory>
@@ -14,8 +15,8 @@ Result<ModuleAST> Parser::parseModule() {
   std::vector<Stmt> stmts;
   Expr lastExpr;
   while (!startsWith({Token::TokenKind::Eof})) {
-    if (startsWith({Token::TokenKind::Let})) {
-      auto stmt = parseDeclare();
+    if (startsWithStmt()) {
+      auto stmt = parseStmt();
       if (!stmt) {
         return tl::unexpected(stmt.error());
       }
@@ -37,6 +38,22 @@ Result<ModuleAST> Parser::parseModule() {
         std::make_shared<ExprStmt>((*expr)->getLoc(), std::move(*expr)));
   }
   return ModuleAST(loc, std::move(stmts), std::move(lastExpr));
+}
+
+Result<Stmt> Parser::parseStmt() {
+  if (startsWith({Token::TokenKind::Let})) {
+    return parseDeclare();
+  }
+  if (startsWith({Token::TokenKind::While})) {
+    return parseWhile();
+  }
+  auto expr = parseExpr();
+  if (!expr) {
+    return tl::unexpected{expr.error()};
+  }
+  EXPECT_EQ(peek().getLoc(), peek().getKind(), Token::TokenKind::Semi);
+  pos_++;
+  return std::make_shared<ExprStmt>((*expr)->getLoc(), std::move(*expr));
 }
 
 Result<Stmt> Parser::parseDeclare() {
@@ -63,6 +80,24 @@ Result<Stmt> Parser::parseDeclare() {
   scope_->insert(std::move(name), stmt);
 
   return stmt;
+}
+
+Result<Stmt> Parser::parseWhile() {
+  auto loc = peek().getLoc();
+  EXPECT_EQ(peek().getLoc(), peek().getKind(), Token::TokenKind::While);
+  pos_++;
+
+  auto cond = parseExpr();
+  if (!cond) {
+    return tl::unexpected{cond.error()};
+  }
+
+  auto body = parseExpr();
+  if (!body) {
+    return tl::unexpected{body.error()};
+  }
+
+  return std::make_shared<WhileStmt>(loc, std::move(*cond), std::move(*body));
 }
 
 Result<Expr> Parser::parseExpr() { return parseAssign(); }
@@ -266,6 +301,40 @@ Result<Expr> Parser::parsePrimary() {
     pos_++;
     return expr;
   }
+  case Token::TokenKind::OpenBrace: {
+    pos_++;
+    std::vector<Stmt> stmts;
+    Expr expr;
+    while (!startsWith({Token::TokenKind::CloseBrace})) {
+      if (startsWithStmt()) {
+        auto stmt = parseStmt();
+        if (!stmt) {
+          return tl::unexpected{stmt.error()};
+        }
+        stmts.emplace_back(*stmt);
+        continue;
+      }
+
+      auto expr_opt = parseExpr();
+      if (!expr_opt) {
+        return tl::unexpected{expr_opt.error()};
+      }
+      if (!startsWith({Token::TokenKind::Semi})) {
+        expr = std::move(*expr_opt);
+        break;
+      }
+      pos_++; // consume semi
+      stmts.emplace_back(std::make_shared<ExprStmt>(loc, std::move(*expr_opt)));
+    }
+
+    if (!expr) {
+      expr = std::make_shared<NumLitExpr>(loc, 0);
+    }
+
+    EXPECT_EQ(peek().getLoc(), peek().getKind(), Token::TokenKind::CloseBrace);
+    pos_++;
+    return std::make_shared<BlockExpr>(loc, std::move(stmts), std::move(expr));
+  }
   case Token::TokenKind::Ident: {
     pos_++;
     std::string name{token.text()};
@@ -294,6 +363,11 @@ bool Parser::startsWith(std::initializer_list<Token::TokenKind> tokens) const {
     it++;
   }
   return true;
+}
+
+bool Parser::startsWithStmt() const {
+  return startsWith({Token::TokenKind::Let}) ||
+         startsWith({Token::TokenKind::While});
 }
 
 } // namespace nyacc

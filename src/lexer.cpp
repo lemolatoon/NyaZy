@@ -92,6 +92,8 @@ Result<std::vector<Token>> Lexer::tokenize() {
         {'=', Token::TokenKind::Eq},
         {'>', Token::TokenKind::Gt},
         {'<', Token::TokenKind::Lt},
+        {'{', Token::TokenKind::OpenBrace},
+        {'}', Token::TokenKind::CloseBrace},
         {';', Token::TokenKind::Semi},
     };
 
@@ -116,7 +118,8 @@ Result<std::vector<Token>> Lexer::tokenize() {
     const auto long_token_mapping = {
         std::pair<std::string_view, Token::TokenKind>{"as",
                                                       Token::TokenKind::As},
-        {"let", Token::TokenKind::Let}};
+        {"let", Token::TokenKind::Let},
+        {"while", Token::TokenKind::While}};
 
     for (const auto &[c, kind] : long_token_mapping) {
       if (startsWith(c)) {

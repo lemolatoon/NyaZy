@@ -10,9 +10,11 @@
 #include <llvm/ExecutionEngine/Orc/ThreadSafeModule.h>
 #include <llvm/Support/TargetSelect.h>
 #include <mlir/Dialect/Arith/IR/Arith.h>
+#include <mlir/Dialect/ControlFlow/IR/ControlFlow.h>
 #include <mlir/Dialect/Func/IR/FuncOps.h>
 #include <mlir/Dialect/LLVMIR/LLVMDialect.h>
 #include <mlir/Dialect/MemRef/IR/MemRef.h>
+#include <mlir/Dialect/SCF/IR/SCF.h>
 #include <mlir/IR/MLIRContext.h>
 #include <mlir/IR/Verifier.h>
 #include <mlir/Pass/PassManager.h>
@@ -65,6 +67,8 @@ int runNyaZy(std::string src) {
   context.getOrLoadDialect<mlir::LLVM::LLVMDialect>();
   context.getOrLoadDialect<mlir::func::FuncDialect>();
   context.getOrLoadDialect<mlir::memref::MemRefDialect>();
+  context.getOrLoadDialect<mlir::scf::SCFDialect>();
+  context.getOrLoadDialect<mlir::cf::ControlFlowDialect>();
   auto moduleOpt = nyacc::MLIRGen::gen(context, *ast);
   EXPECT_TRUE(moduleOpt) << moduleOpt.error().error(src) << "\n";
   auto &module = *moduleOpt;
@@ -123,6 +127,23 @@ TEST(SimpleTest, Variable) {
   EXPECT_EQ(12, runNyaZy("let a = 5; a = a + 7; a"));
   // shadowing
   EXPECT_EQ(12, runNyaZy("let a = 5; let a = a + 7; a"));
+}
+
+TEST(SimpleTest, While) {
+  // block expr
+  EXPECT_EQ(13, runNyaZy("{ let a = 5; a + 8 }"));
+  // block expr's stmt
+  EXPECT_EQ(7, runNyaZy("let a = 5; { a = 7; }; a"));
+  EXPECT_EQ(10, runNyaZy("let a = 0; while (a < 10) { a = a + 1; } a"));
+  EXPECT_EQ(55, runNyaZy(R"(
+        let a = 0;
+        let sum = 0;
+        while (a <= 10) {
+            sum = sum + a;
+            a = a + 1;
+        }
+        sum
+      )"));
 }
 
 // メイン関数
