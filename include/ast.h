@@ -19,6 +19,7 @@ public:
   virtual void visit(const class UnaryExpr &node) = 0;
   virtual void visit(const class VariableExpr &node) = 0;
   virtual void visit(const class AssignExpr &node) = 0;
+  virtual void visit(const class BlockExpr &node) = 0;
 };
 
 class ExprASTNode {
@@ -30,6 +31,7 @@ public:
     Binary,
     Variable,
     Assign,
+    Block,
   };
   explicit ExprASTNode(Location loc, ExprKind kind) : kind_(kind), loc_(loc) {}
   virtual ~ExprASTNode() = default;
@@ -41,6 +43,26 @@ public:
 private:
   ExprKind kind_;
   Location loc_;
+};
+
+class BlockExpr : public ExprASTNode {
+public:
+  BlockExpr(Location loc, std::vector<Stmt> stmts, Expr expr)
+      : ExprASTNode(loc, ExprKind::Block), stmts_(std::move(stmts)),
+        expr_(std::move(expr)) {}
+  void accept(Visitor &v) override { v.visit(*this); }
+  const std::vector<Stmt> &getStmts() const { return stmts_; }
+  const Expr &getExpr() const { return expr_; }
+
+  static bool classof(const ExprASTNode *node) {
+    return node->getKind() == ExprKind::Block;
+  }
+
+  void dump(int level) const override;
+
+private:
+  std::vector<Stmt> stmts_;
+  Expr expr_;
 };
 
 class NumLitExpr : public ExprASTNode {

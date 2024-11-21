@@ -29,7 +29,7 @@ class ErrorBuilder {
 public:
   ErrorBuilder(const Location invoked_loc, const Location error_loc)
       : invoked_loc_(invoked_loc), error_loc_(error_loc), oss_() {
-    oss_ << "@" << *invoked_loc_.file << ":" << invoked_loc_.line << ":"
+    oss_ << "@ " << *invoked_loc_.file << ":" << invoked_loc_.line << ":"
          << invoked_loc_.col << "\n";
   }
 

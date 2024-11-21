@@ -11,6 +11,16 @@ void ModuleAST::dump(int level) const {
   getExpr()->dump(level + 1);
 }
 
+void BlockExpr::dump(int level) const {
+  std::cout << std::string(level * 2, ' ') << "BlockExpr(\n";
+  for (auto &stmt : getStmts()) {
+    stmt->dump(level + 1);
+  }
+  std::cout << std::string(level * 2, ' ') << "Expr:\n";
+  getExpr()->dump(level + 1);
+  std::cout << std::string(level * 2, ' ') << ")\n";
+}
+
 void DeclareStmt::dump(int level) const {
   std::cout << std::string(level * 2, ' ') << "DeclareStmt(" << name_
             << " = \n";

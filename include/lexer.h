@@ -20,12 +20,15 @@ public:
     Slash,
     OpenParen,
     CloseParen,
+    OpenBrace,
+    CloseBrace,
     Eq,
     Gt,
     Lt,
     As,
     Semi,
     Let,
+    While,
     Eof,
   };
   static const char *tokenKindToString(TokenKind kind) {
@@ -44,6 +47,10 @@ public:
       return "OpenParen";
     case TokenKind::CloseParen:
       return "CloseParen";
+    case TokenKind::OpenBrace:
+      return "OpenBrace";
+    case TokenKind::CloseBrace:
+      return "CloseBrace";
     case TokenKind::Eof:
       return "Eof";
     case TokenKind::Eq:
@@ -58,6 +65,8 @@ public:
       return "Ident";
     case TokenKind::Semi:
       return "Semi";
+    case TokenKind::While:
+      return "While";
     case TokenKind::Let:
       return "Let";
       break;

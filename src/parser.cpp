@@ -266,6 +266,40 @@ Result<Expr> Parser::parsePrimary() {
     pos_++;
     return expr;
   }
+  case Token::TokenKind::OpenBrace: {
+    pos_++;
+    std::vector<Stmt> stmts;
+    Expr expr;
+    while (!startsWith({Token::TokenKind::CloseBrace})) {
+      if (startsWith({Token::TokenKind::Let})) {
+        auto stmt = parseDeclare();
+        if (!stmt) {
+          return tl::unexpected{stmt.error()};
+        }
+        stmts.emplace_back(*stmt);
+        continue;
+      }
+
+      auto expr_opt = parseExpr();
+      if (!expr_opt) {
+        return tl::unexpected{expr_opt.error()};
+      }
+      if (!startsWith({Token::TokenKind::Semi})) {
+        expr = std::move(*expr_opt);
+        break;
+      }
+      pos_++; // consume semi
+      stmts.emplace_back(std::make_shared<ExprStmt>(loc, std::move(*expr_opt)));
+    }
+
+    if (!expr) {
+      expr = std::make_shared<NumLitExpr>(loc, 0);
+    }
+
+    EXPECT_EQ(peek().getLoc(), peek().getKind(), Token::TokenKind::CloseBrace);
+    pos_++;
+    return std::make_shared<BlockExpr>(loc, std::move(stmts), std::move(expr));
+  }
   case Token::TokenKind::Ident: {
     pos_++;
     std::string name{token.text()};

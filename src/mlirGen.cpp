@@ -216,6 +216,16 @@ public:
     builder_.create<nyacc::StoreOp>(mlirLoc(loc), rhs, memref);
   }
 
+  void visit(const class nyacc::BlockExpr &node) override {
+    for (auto &stmt : node.getStmts()) {
+      stmt->accept(*this);
+      if (has_error()) {
+        return;
+      }
+    }
+    node.getExpr()->accept(*this);
+  }
+
 private:
   bool has_error() { return !flag_.has_value(); }
   std::optional<tl::unexpected<nyacc::ErrorInfo>> error() {

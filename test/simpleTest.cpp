@@ -125,6 +125,14 @@ TEST(SimpleTest, Variable) {
   EXPECT_EQ(12, runNyaZy("let a = 5; let a = a + 7; a"));
 }
 
+TEST(SimpleTest, While) {
+  // block expr
+  EXPECT_EQ(13, runNyaZy("{ let a = 5; a + 8 }"));
+  // block expr's stmt
+  EXPECT_EQ(7, runNyaZy("let a = 5; { a = 7; }; a"));
+  EXPECT_EQ(10, runNyaZy("let a = 0; while (a < 10) { a = a + 1; } a"));
+}
+
 // メイン関数
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);

@@ -292,10 +292,8 @@ struct LoadOpLowering : public mlir::OpConversionPattern<nyacc::LoadOp> {
   mlir::LogicalResult matchAndRewrite(
       nyacc::LoadOp op, OpAdaptor adaptor,
       mlir::ConversionPatternRewriter &rewriter) const final {
-    auto op2 = rewriter.replaceOpWithNewOp<mlir::memref::LoadOp>(
+    rewriter.replaceOpWithNewOp<mlir::memref::LoadOp>(
         op, adaptor.getMemref());
-    llvm::errs() << "LoadOpLowering: \n";
-    op2.print(llvm::errs());
     return mlir::success();
   }
 };
