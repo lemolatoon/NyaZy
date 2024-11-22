@@ -1,16 +1,16 @@
 # NyaZy
 
-## Current `nyacc` behavior
+## Current `nyac` behavior
 
-Emit MLIR and converted LLVM IR from MLIR where the code is just printing *hello world*.
-Try the emitted LLVM IR.
+Read NyaZy source code from specified input file and compiles it into llvm ir.
 ```bash
-# run the nyacc to see emitted LLVM IR
-$ ./bin/nyacc
-# copy and paste emitted LLVM IR
-$ vim tmp.ll
+# run the nyacc, generating sample.ll
+$ ./bin/nyac sample.nz
+$ ./bin/nyac sample.nz -o output.ll
+# Specify output filename with debug output
+$ ./bin/nyac sample.nz -o output.ll -d
 # run the LLVM IR using LLVM's lli
-$ ./bin lli tmp.ll
+$ ./bin lli sample.ll
 ```
 
 ## Setup
