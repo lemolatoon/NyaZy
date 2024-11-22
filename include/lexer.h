@@ -13,6 +13,7 @@ class Token {
 public:
   enum class TokenKind {
     NumLit,
+    StrLit,
     Ident,
     Plus,
     Minus,
@@ -27,6 +28,7 @@ public:
     Lt,
     As,
     Semi,
+    Comma,
     Let,
     While,
     Eof,
@@ -35,6 +37,8 @@ public:
     switch (kind) {
     case TokenKind::NumLit:
       return "NumLit";
+    case TokenKind::StrLit:
+      return "StrLit";
     case TokenKind::Plus:
       return "Plus";
     case TokenKind::Minus:
@@ -51,6 +55,8 @@ public:
       return "OpenBrace";
     case TokenKind::CloseBrace:
       return "CloseBrace";
+    case TokenKind::Comma:
+      return "Comma";
     case TokenKind::Eof:
       return "Eof";
     case TokenKind::Eq:

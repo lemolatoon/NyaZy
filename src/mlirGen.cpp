@@ -8,6 +8,7 @@
 #include <error.h>
 #include <iostream>
 #include <mlir/Dialect/Func/IR/FuncOps.h>
+#include <mlir/Dialect/LLVMIR/LLVMTypes.h>
 #include <mlir/Dialect/SCF/IR/SCF.h>
 #include <mlir/IR/BuiltinTypes.h>
 #include <mlir/IR/Location.h>
@@ -74,6 +75,31 @@ public:
                                      value_.value());
   }
 
+  void visit(const class nyacc::CallExpr &node) override {
+    auto loc = node.getLoc();
+    std::vector<mlir::Value> args;
+    for (auto &arg : node.getArgs()) {
+      arg->accept(*this);
+      if (has_error()) {
+        return;
+      }
+      args.push_back(value_.value());
+    }
+    if (node.getName() == "print") {
+      if (args.size() != 1) {
+        flag_ = FATAL(loc, "print() takes exactly 1 argument (", args.size(),
+                      " given)");
+        return;
+      }
+      auto op = builder_.create<nyacc::PrintOp>(mlirLoc(loc), args[0]);
+      op->getResult(0).setType(builder_.getI32Type());
+      value_ = op;
+    } else {
+      // TODO
+      flag_ = FATAL(loc, "Unsupported Generic Call Function: ", node.getName());
+    }
+  }
+
   void visit(const class nyacc::DeclareStmt &node) override {
     node.getInitExpr()->accept(*this);
     if (has_error()) {
@@ -129,7 +155,16 @@ public:
   void visit(const nyacc::NumLitExpr &numLit) override {
     value_ = builder_.create<nyacc::ConstantOp>(
         mlirLoc(numLit.getLoc()),
+        mlir::IntegerType::get(builder_.getContext(), 64),
         builder_.getI64IntegerAttr(numLit.getValue()));
+  }
+
+  void visit(const nyacc::StrLitExpr &strLit) override {
+    auto op = builder_.create<nyacc::ConstantOp>(
+        mlirLoc(strLit.getLoc()),
+        mlir::LLVM::LLVMPointerType::get(builder_.getContext()),
+        builder_.getStringAttr(strLit.getValue()));
+    value_ = op;
   }
 
   void visit(const nyacc::UnaryExpr &unaryExpr) override {

@@ -15,24 +15,28 @@ public:
   virtual void visit(const class ExprStmt &node) = 0;
   virtual void visit(const class WhileStmt &node) = 0;
   virtual void visit(const class NumLitExpr &node) = 0;
+  virtual void visit(const class StrLitExpr &node) = 0;
   virtual void visit(const class BinaryExpr &node) = 0;
   virtual void visit(const class CastExpr &node) = 0;
   virtual void visit(const class UnaryExpr &node) = 0;
   virtual void visit(const class VariableExpr &node) = 0;
   virtual void visit(const class AssignExpr &node) = 0;
   virtual void visit(const class BlockExpr &node) = 0;
+  virtual void visit(const class CallExpr &node) = 0;
 };
 
 class ExprASTNode {
 public:
   enum class ExprKind {
     NumLit,
+    StrLit,
     Unary,
     Cast,
     Binary,
     Variable,
     Assign,
     Block,
+    Call,
   };
   explicit ExprASTNode(Location loc, ExprKind kind) : kind_(kind), loc_(loc) {}
   virtual ~ExprASTNode() = default;
@@ -44,6 +48,43 @@ public:
 private:
   ExprKind kind_;
   Location loc_;
+};
+
+class StrLitExpr : public ExprASTNode {
+public:
+  StrLitExpr(Location loc, std::string value)
+      : ExprASTNode(loc, ExprKind::StrLit), value_(std::move(value)) {}
+  void accept(Visitor &v) override { v.visit(*this); }
+  const std::string &getValue() const { return value_; }
+
+  static bool classof(const ExprASTNode *node) {
+    return node->getKind() == ExprKind::StrLit;
+  }
+
+  void dump(int level) const override;
+
+private:
+  std::string value_;
+};
+
+class CallExpr : public ExprASTNode {
+public:
+  CallExpr(Location loc, std::string name, std::vector<Expr> args)
+      : ExprASTNode(loc, ExprKind::Call), name_(std::move(name)),
+        args_(std::move(args)) {}
+  void accept(Visitor &v) override { v.visit(*this); }
+  const std::string &getName() const { return name_; }
+  const std::vector<Expr> &getArgs() const { return args_; }
+
+  static bool classof(const ExprASTNode *node) {
+    return node->getKind() == ExprKind::Call;
+  }
+
+  void dump(int level) const override;
+
+private:
+  std::string name_;
+  std::vector<Expr> args_;
 };
 
 class BlockExpr : public ExprASTNode {

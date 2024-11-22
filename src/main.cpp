@@ -38,11 +38,9 @@
 
 int main() {
   std::string src = R"(
-  let a = 0; 
-  while (a < 10) { 
-    a = a + 1; 
-  } 
-  a
+  print("Hello World!");
+  print(2 + 3);
+  0
 )";
   llvm::outs() << "Source code:\n";
   llvm::outs() << src;
@@ -84,6 +82,7 @@ int main() {
   auto &module = *moduleOpt;
   llvm::outs() << "MLIR:\n";
   module->dump();
+  module->print(llvm::outs(), mlir::OpPrintingFlags().printGenericOpForm());
 
   if (mlir::failed(mlir::verify(*module))) {
     llvm::errs() << "Module verification failed.\n";

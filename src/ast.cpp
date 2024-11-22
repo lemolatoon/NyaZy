@@ -11,6 +11,14 @@ void ModuleAST::dump(int level) const {
   getExpr()->dump(level + 1);
 }
 
+void CallExpr::dump(int level) const {
+  std::cout << std::string(level * 2, ' ') << "CallExpr(" << name_ << "\n";
+  for (auto &arg : getArgs()) {
+    arg->dump(level + 1);
+  }
+  std::cout << std::string(level * 2, ' ') << ")\n";
+}
+
 void BlockExpr::dump(int level) const {
   std::cout << std::string(level * 2, ' ') << "BlockExpr(\n";
   for (auto &stmt : getStmts()) {
@@ -45,6 +53,10 @@ void WhileStmt::dump(int level) const {
 
 void NumLitExpr::dump(int level) const {
   std::cout << std::string(level * 2, ' ') << "NumLitExpr(" << value_ << ")\n";
+}
+
+void StrLitExpr::dump(int level) const {
+  std::cout << std::string(level * 2, ' ') << "StrLitExpr(" << value_ << ")\n";
 }
 
 void UnaryExpr::dump(int level) const {
