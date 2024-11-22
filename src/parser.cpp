@@ -294,6 +294,10 @@ Result<Expr> Parser::parsePrimary() {
       return FATAL(loc, "Unexpected token: ", token, "\n");
     }
   }
+  case Token::TokenKind::StrLit: {
+    pos_++;
+    return std::make_shared<StrLitExpr>(loc, std::string{token.text()});
+  }
   case Token::TokenKind::OpenParen: {
     pos_++;
     auto expr = parseExpr();

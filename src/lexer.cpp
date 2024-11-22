@@ -72,6 +72,22 @@ Result<std::vector<Token>> Lexer::tokenize() {
       continue;
     }
 
+    if (startsWith("\"")) {
+      auto loc = currentLocation();
+      advance();
+      const auto start_pos = pos_;
+      while (!atEof() && input_[pos_] != '"') {
+        advance();
+      }
+      if (atEof()) {
+        return FATAL(loc, "Unterminated string literal");
+      }
+      std::string_view str_lit = input_.substr(start_pos, pos_ - start_pos);
+      advance();
+      tokens.emplace_back(Token::TokenKind::StrLit, str_lit, loc);
+      continue;
+    }
+
     if (input_[pos_] == '\n') {
       nextLine();
       continue;

@@ -50,17 +50,79 @@ namespace {
 //     return mlir::SymbolRefAttr::get(context, exitSymbol);
 // }
 
-class ConstantOpLowering : public mlir::OpConversionPattern<nyacc::ConstantOp> {
-public:
-  explicit ConstantOpLowering(mlir::MLIRContext *context)
-      : OpConversionPattern(context) {}
+// class ConstantOpLowering : public mlir::OpConversionPattern<nyacc::ConstantOp> {
+// public:
+//   explicit ConstantOpLowering(mlir::MLIRContext *context)
+//       : OpConversionPattern(context) {}
+// 
+//   mlir::LogicalResult
+//   matchAndRewrite(nyacc::ConstantOp op, OpAdaptor adaptor [[maybe_unused]],
+//                   mlir::ConversionPatternRewriter &rewriter) const override {
+//     auto constantOp = mlir::cast<nyacc::ConstantOp>(op);
+//     rewriter.replaceOp(op, rewriter.create<mlir::arith::ConstantOp>(
+//                                op->getLoc(), constantOp.getValue()));
+// 
+//     return mlir::success();
+//   }
+// };
 
-  mlir::LogicalResult
-  matchAndRewrite(nyacc::ConstantOp op, OpAdaptor adaptor [[maybe_unused]],
-                  mlir::ConversionPatternRewriter &rewriter) const override {
-    auto constantOp = mlir::cast<nyacc::ConstantOp>(op);
-    rewriter.replaceOp(op, rewriter.create<mlir::arith::ConstantOp>(
-                               op->getLoc(), constantOp.getValue()));
+// Helper function to get or create a format string global variable
+mlir::Value getOrCreateGlobalString(mlir::Location loc, mlir::ModuleOp module,
+                                    mlir::PatternRewriter &rewriter,
+                                    llvm::StringRef formatStr) {
+  mlir::LLVM::GlobalOp globalStr;
+
+  // Use the format string as the global variable name
+  std::string globalName = "global_str_" + std::to_string(std::hash<std::string>{}(formatStr.str()));
+
+  if (!(globalStr = module.lookupSymbol<mlir::LLVM::GlobalOp>(globalName))) {
+    mlir::OpBuilder::InsertionGuard guard(rewriter);
+    rewriter.setInsertionPointToStart(module.getBody());
+
+    mlir::Type i8Type = mlir::IntegerType::get(rewriter.getContext(), 8);
+    mlir::Type strType = mlir::LLVM::LLVMArrayType::get(i8Type, formatStr.size() + 1);
+
+    globalStr = rewriter.create<mlir::LLVM::GlobalOp>(
+        loc, strType, /*isConstant=*/true, mlir::LLVM::Linkage::Internal,
+        globalName, rewriter.getStringAttr(formatStr.str() + '\0'));
+  }
+
+  // Get a pointer to the first character in the global string
+  mlir::Type i8PtrType = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
+
+  mlir::Value globalPtr = rewriter.create<mlir::LLVM::AddressOfOp>(loc, globalStr);
+  mlir::Value zero = rewriter.create<mlir::LLVM::ConstantOp>(
+      loc, rewriter.getI64Type(), rewriter.getI64IntegerAttr(0));
+  mlir::Value ptr = rewriter.create<mlir::LLVM::GEPOp>(
+      loc, i8PtrType, globalStr.getType(), globalPtr, mlir::ValueRange{zero, zero});
+
+  return ptr;
+}
+
+struct ConstantOpLowering : public mlir::OpConversionPattern<nyacc::ConstantOp> {
+  using OpConversionPattern<nyacc::ConstantOp>::OpConversionPattern;
+
+  mlir::LogicalResult matchAndRewrite(
+      nyacc::ConstantOp op, OpAdaptor adaptor [[maybe_unused]],
+      mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::Location loc = op.getLoc();
+
+    if (auto intAttr = llvm::dyn_cast<mlir::IntegerAttr>(op.getValue())) {
+      // Handle integer constants
+      rewriter.replaceOp(op, rewriter.create<mlir::arith::ConstantOp>(
+                                 op->getLoc(), op.getValue()));
+    } else if (auto strAttr = llvm::dyn_cast<mlir::StringAttr>(op.getValue())) {
+      // Handle string constants
+      mlir::ModuleOp module = op->getParentOfType<mlir::ModuleOp>();
+
+      // Create a global string constant
+      std::string globalName = "str_const_" + std::to_string(reinterpret_cast<uintptr_t>(op.getOperation()));
+      auto ptr = getOrCreateGlobalString(loc, module, rewriter, strAttr.getValue());
+
+      rewriter.replaceOp(op, ptr);
+    } else {
+      return mlir::failure();
+    }
 
     return mlir::success();
   }
@@ -382,75 +444,108 @@ private:
   void runOnOperation() final;
 };
 
-// Lowering for nyazy.print -> LLVM printf
-struct PrintOpLowering : public mlir::OpConversionPattern<nyacc::PrintOp> {
-  using OpConversionPattern<nyacc::PrintOp>::OpConversionPattern;
+// Helper function to get or insert the 'printf' function declaration
+mlir::LLVM::LLVMFuncOp getOrInsertPrintf(mlir::ModuleOp module, mlir::PatternRewriter &rewriter) {
+  auto printfFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("printf");
+  if (printfFunc) {
+    return printfFunc;
+  }
+
+  // Create 'printf' function declaration
+  mlir::OpBuilder::InsertionGuard guard(rewriter);
+  rewriter.setInsertionPointToStart(module.getBody());
+
+  mlir::Type i8PtrType = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
+
+  auto printfType = mlir::LLVM::LLVMFunctionType::get(
+      mlir::IntegerType::get(rewriter.getContext(), 32),
+      {i8PtrType}, /*isVarArg=*/true);
+
+  printfFunc = rewriter.create<mlir::LLVM::LLVMFuncOp>(
+      rewriter.getUnknownLoc(), "printf", printfType);
+
+  return printfFunc;
+}
+
+
+struct PrintIntOpLowering : public mlir::OpConversionPattern<nyacc::PrintOp> {
+  using mlir::OpConversionPattern<nyacc::PrintOp>::OpConversionPattern;
 
   mlir::LogicalResult matchAndRewrite(
       nyacc::PrintOp op, OpAdaptor adaptor,
       mlir::ConversionPatternRewriter &rewriter) const override {
-    mlir::Location loc = op.getLoc();
-    mlir::ModuleOp module = op->getParentOfType<mlir::ModuleOp>();
-    auto* ctx = module.getContext();
-
-    // Get the LLVM ptr type
-    auto ptrType = mlir::LLVM::LLVMPointerType::get(ctx);
-    // auto elmType = mlir::IntegerType::get(ctx, 8);
-
-    // Create format string global variable (if not existing)
-    mlir::LLVM::GlobalOp formatStr;
-    if (!(formatStr = module.lookupSymbol<mlir::LLVM::GlobalOp>("integer_format_specifier"))) {
-      mlir::ConversionPatternRewriter::InsertionGuard guard(rewriter);
-      mlir::Type charType = mlir::IntegerType::get(rewriter.getContext(), 8);
-      mlir::Type arrayType = mlir::LLVM::LLVMArrayType::get(charType, 4); // "%ld\0"
-      rewriter.setInsertionPointToStart(module.getBody());
-      formatStr = rewriter.create<mlir::LLVM::GlobalOp>(
-          loc, arrayType, /*isConstant=*/true, mlir::LLVM::Linkage::Internal,
-          "integer_format_specifier", mlir::StringAttr::get(rewriter.getContext(), "%ld\n"));
-    }
-
-    // Get pointer to the format string
-    mlir::Value formatStrPtr = rewriter.create<mlir::LLVM::AddressOfOp>(loc, formatStr);
-    mlir::Value zero = rewriter.create<mlir::LLVM::ConstantOp>(
-        loc, mlir::IntegerType::get(rewriter.getContext(), 64),
-        rewriter.getIntegerAttr(rewriter.getIntegerType(64), 0));
-    llvm::SmallVector<mlir::Value, 2> indices = {zero, zero};
-    formatStrPtr = rewriter.create<mlir::LLVM::GEPOp>(
-        loc, ptrType, formatStr.getType(), formatStrPtr, indices);
-
-    // Declare or get the printf function
-    mlir::LLVM::LLVMFuncOp printfFunc;
-    mlir::Type printfType = mlir::LLVM::LLVMFunctionType::get(
-        mlir::IntegerType::get(rewriter.getContext(), 32),
-        {ptrType}, /*isVarArg=*/true);
-    if (!(printfFunc = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("printf"))) {
-      mlir::ConversionPatternRewriter::InsertionGuard guard(rewriter);
-      rewriter.setInsertionPointToStart(module.getBody());
-      printfFunc = rewriter.create<mlir::LLVM::LLVMFuncOp>(
-          loc, "printf", printfType);
-    }
-
-    // Convert the operand to LLVM type if necessary
-    auto value = adaptor.getOperand();
-    if (llvm::isa<mlir::IntegerType>(value.getType())) {
-      // value = typeConverter->materializeTargetConversion(
-      //     rewriter, loc, typeConverter->convertType(value.getType()), value);
-    } else {
-      // TODO: Support other types
+    // Check if the operand is an integer type
+    auto operandType = adaptor.getOperand().getType();
+    if (!llvm::isa<mlir::IntegerType>(operandType)) {
       return mlir::failure();
     }
 
-    // Call printf
+    mlir::Location loc = op.getLoc();
+    mlir::ModuleOp module = op->getParentOfType<mlir::ModuleOp>();
+
+    // Get or create the printf function declaration
+    auto printfFunc = getOrInsertPrintf(module, rewriter);
+
+    // Get or create the format string for integers
+    auto formatStrPtr = getOrCreateGlobalString(loc, module, rewriter, "%ld\n");
+
+    // Ensure the operand is of LLVM integer type (i64)
+    mlir::Value value = adaptor.getOperand();
+
+    // Create the printf call
     auto callop = rewriter.create<mlir::LLVM::CallOp>(
-        loc,
-        // printfType,
+      loc,
         mlir::TypeRange{mlir::IntegerType::get(rewriter.getContext(), 32)},
         mlir::SymbolRefAttr::get(printfFunc),
-        mlir::ValueRange{formatStrPtr, value}
-        );
+        mlir::ValueRange{formatStrPtr, value});
     
+    auto ptrType = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
+    mlir::Type printfType = mlir::LLVM::LLVMFunctionType::get(
+        mlir::IntegerType::get(rewriter.getContext(), 32),
+        {ptrType}, /*isVarArg=*/true);
     callop->setAttr("var_callee_type", mlir::TypeAttr::get(printfType));
-    
+
+    rewriter.eraseOp(op);
+
+    return mlir::success();
+  }
+};
+
+struct PrintStringOpLowering : public mlir::OpConversionPattern<nyacc::PrintOp> {
+  using mlir::OpConversionPattern<nyacc::PrintOp>::OpConversionPattern;
+
+  mlir::LogicalResult matchAndRewrite(
+      nyacc::PrintOp op, OpAdaptor adaptor,
+      mlir::ConversionPatternRewriter &rewriter) const override {
+    // Check if the operand is an LLVM pointer to i8 (string)
+    auto operandType = adaptor.getOperand().getType();
+    auto llvmPtrType = llvm::dyn_cast<mlir::LLVM::LLVMPointerType>(operandType);
+    if (!llvmPtrType) {
+      return mlir::failure();
+    }
+
+    mlir::Location loc = op.getLoc();
+    mlir::ModuleOp module = op->getParentOfType<mlir::ModuleOp>();
+
+    // Get or create the printf function declaration
+    auto printfFunc = getOrInsertPrintf(module, rewriter);
+
+    // Get or create the format string for strings
+    auto formatStrPtr = getOrCreateGlobalString(loc, module, rewriter, "%s\n");
+
+    // Create the printf call
+    auto callop = rewriter.create<mlir::LLVM::CallOp>(
+        loc,
+        mlir::TypeRange{mlir::IntegerType::get(rewriter.getContext(), 32)},
+        mlir::SymbolRefAttr::get(printfFunc),
+        mlir::ValueRange{formatStrPtr, adaptor.getOperand()}
+    );
+    auto ptrType = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
+    mlir::Type printfType = mlir::LLVM::LLVMFunctionType::get(
+        mlir::IntegerType::get(rewriter.getContext(), 32),
+        {ptrType}, /*isVarArg=*/true);
+    callop->setAttr("var_callee_type", mlir::TypeAttr::get(printfType));
+
     rewriter.eraseOp(op);
 
     return mlir::success();
@@ -526,7 +621,7 @@ void NyaZyToLLVMPass::runOnOperation() {
   printTarget.addIllegalOp<nyacc::PrintOp>();
 
   mlir::RewritePatternSet printPatterns(&getContext());
-  printPatterns.add<PrintOpLowering>(&getContext());
+  printPatterns.add<PrintIntOpLowering, PrintStringOpLowering>(&getContext());
 
   if (failed(
           applyFullConversion(getOperation(), printTarget, std::move(printPatterns)))) {

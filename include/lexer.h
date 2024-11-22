@@ -13,6 +13,7 @@ class Token {
 public:
   enum class TokenKind {
     NumLit,
+    StrLit,
     Ident,
     Plus,
     Minus,
@@ -36,6 +37,8 @@ public:
     switch (kind) {
     case TokenKind::NumLit:
       return "NumLit";
+    case TokenKind::StrLit:
+      return "StrLit";
     case TokenKind::Plus:
       return "Plus";
     case TokenKind::Minus:

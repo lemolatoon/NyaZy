@@ -55,6 +55,10 @@ void NumLitExpr::dump(int level) const {
   std::cout << std::string(level * 2, ' ') << "NumLitExpr(" << value_ << ")\n";
 }
 
+void StrLitExpr::dump(int level) const {
+  std::cout << std::string(level * 2, ' ') << "StrLitExpr(" << value_ << ")\n";
+}
+
 void UnaryExpr::dump(int level) const {
   std::cout << std::string(level * 2, ' ') << "UnaryExpr(\n";
   std::cout << std::string((level + 1) * 2, ' ') << UnaryOpToStr(op_) << "\n";

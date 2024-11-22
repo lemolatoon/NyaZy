@@ -20,8 +20,8 @@ include "mlir/Interfaces/MemorySlotInterfaces.td"
 // ConstanOp
 //===----------------------------------------------------------------------===//
 def ConstantOp : NyaZyOp<"constant", 
-    [Pure,
-     AllTypesMatch<["value", "result"]>,
+    [Pure
+    //  AllTypesMatch<["value", "result"]>,
      ]> {
     let summary = "integer or floating point constant operation";
     let description = [{
@@ -40,7 +40,7 @@ def ConstantOp : NyaZyOp<"constant",
     let arguments = (ins TypedAttrInterface:$value);
     let results = (outs /*SignlessIntegerOrFloatLike*/AnyType:$result);
 
-    let assemblyFormat = "attr-dict $value";
+    let assemblyFormat = "attr-dict $value `:` type($result)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -605,9 +605,9 @@ def PrintOp : NyaZyOp<"print", []> {
   }];
 
   let arguments = (ins AnyType:$operand);
-  let results = (outs);
+  let results = (outs I32:$result);
 
-  let assemblyFormat = "$operand attr-dict `:` type($operand)";
+  let assemblyFormat = "`(` $operand attr-dict `:` type($operand) `)` `->` type($result)";
 }
 
 #endif // NYAZY_OPS

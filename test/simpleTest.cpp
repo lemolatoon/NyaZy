@@ -224,10 +224,13 @@ TEST(SimpleTest, While) {
 }
 
 TEST(SimpleTest, PrintOp) {
-  EXPECT_EQ("124\n", runNyaZyWithCapturedOutput("print(123 + 1)"));
-  EXPECT_EQ("123\n456\n", runNyaZyWithCapturedOutput("print(123); print(456)"));
+  EXPECT_EQ("124\n", runNyaZyWithCapturedOutput("print(123 + 1); 0"));
   EXPECT_EQ("123\n456\n",
             runNyaZyWithCapturedOutput("print(123); print(456); 0"));
+  EXPECT_EQ("123\n456\n",
+            runNyaZyWithCapturedOutput("print(123); print(456); 0"));
+  EXPECT_EQ("Hello World!\n",
+            runNyaZyWithCapturedOutput("print(\"Hello World!\"); 0"));
 }
 
 // メイン関数
