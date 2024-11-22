@@ -42,7 +42,7 @@ message(STATUS "LLVM_TARGET_LIBS: ${LLVM_TARGET_LIBS}")
 
 target_link_libraries(simpleTest
     PRIVATE
-    libNYACC
+    NYAC
     NyaZyDialect
     ${dialect_libs}
     ${extension_libs}
