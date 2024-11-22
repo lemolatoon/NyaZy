@@ -18,7 +18,7 @@ COMMAND_MAP = {
     "thirdparty": "scripts/thirdparty.sh",
     "configure": f"scripts/configure.sh -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang",
     "build": f"ninja -j{os.cpu_count()} -C build",
-    "nyacc": "build/nyacc",
+    "nyac": "build/nyac",
     "test": "ctest --test-dir build/test --output-on-failure",
     "lli": os.path.join(llvm_bin_dir, "lli"),
     "fmt": f"{clang_format_path} -i **/*.cpp **/*.h",
@@ -44,7 +44,7 @@ def main():
     if command_name in COMMAND_MAP:
         command = COMMAND_MAP[command_name]
         try:
-            subprocess.run([command] + args, check=True, shell=True)
+            subprocess.run(" ".join([command] + args), check=True, shell=True)
         except subprocess.CalledProcessError as e:
             print(f"Error: Command '{command_name}' failed with exit code {e.returncode}")
             sys.exit(e.returncode)
