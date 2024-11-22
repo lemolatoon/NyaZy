@@ -1,0 +1,12 @@
+print("Say Hello to NyaZy!!");
+
+let i = 10;
+let sum = 0;
+while (i > 0) {
+    sum = sum + i;
+    i = i - 1;
+}
+
+print("Sum of 10, 9, ..., 1");
+print(sum);
+0
