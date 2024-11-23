@@ -39,8 +39,8 @@ find_package(tl-expected REQUIRED CONFIG)
 include_directories(${tl-expected_INSTALL_DIR}/include)
 
 
-add_executable(nyacc)
-add_library(libNYACC)
+add_executable(nyac)
+add_library(NYAC)
 add_library(NyaZyDialect)
 add_executable(simpleTest)
 set(CMAKE_CXX_FLAGS "-Wall -Wextra -Werror -fno-rtti -g")
@@ -49,11 +49,11 @@ include_directories(include)
 add_subdirectory(include)
 include_directories(${CMAKE_BINARY_DIR}/include)
 
-add_dependencies(libNYACC MLIRNyaZyOpsIncGen)
-add_dependencies(libNYACC MLIRNyaZyDialectIncGen)
+add_dependencies(NYAC MLIRNyaZyOpsIncGen)
+add_dependencies(NYAC MLIRNyaZyDialectIncGen)
 
-add_dependencies(nyacc MLIRNyaZyOpsIncGen)
-add_dependencies(nyacc MLIRNyaZyDialectIncGen)
+add_dependencies(nyac MLIRNyaZyOpsIncGen)
+add_dependencies(nyac MLIRNyaZyDialectIncGen)
 
 add_dependencies(simpleTest MLIRNyaZyOpsIncGen)
 add_dependencies(simpleTest MLIRNyaZyDialectIncGen)

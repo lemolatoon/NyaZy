@@ -16,11 +16,10 @@ get_property(extension_libs GLOBAL PROPERTY MLIR_EXTENSION_LIBS)
 
 message(STATUS "nyazy dialect sources: ${nyazy_dialect_sources}")
 # Create an executable for the main project from the source files
-target_sources(libNYACC PRIVATE ${SRC_FILES} ${nyazy_dialect_sources})
+target_sources(NYAC PRIVATE ${SRC_FILES} ${nyazy_dialect_sources})
 
 # Link with necessary libraries (e.g., LLVM, if needed)
-# target_link_libraries(nyacc ${LLVM_LIBS})
-target_link_libraries(libNYACC
+target_link_libraries(NYAC
     PRIVATE
     NyaZyDialect
     ${dialect_libs}
@@ -36,7 +35,7 @@ target_link_libraries(libNYACC
     MLIRBuiltinToLLVMIRTranslation
 )
 
-mlir_check_link_libraries(libNYACC)
+mlir_check_link_libraries(NYAC)
 
-target_sources(nyacc PRIVATE main.cpp)
-target_link_libraries(nyacc libNYACC)
+target_sources(nyac PRIVATE main.cpp)
+target_link_libraries(nyac NYAC)
