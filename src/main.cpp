@@ -123,7 +123,9 @@ int main(int argc, char **argv) {
   }
 
   mlir::PassManager pm(&context);
-  pm.addPass(nyacc::createNyaZyToLLVMPass());
+  pm.addPass(nyacc::createNyaZyToStdPass());
+  pm.addPass(nyacc::createStdToLLVMPass());
+  pm.addPass(nyacc::createNyaZyPrintToLLVMPass());
 
   if (mlir::failed(pm.run(*module))) {
     llvm::errs() << "Failed to lower to LLVM IR\n";
