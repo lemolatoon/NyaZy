@@ -176,7 +176,7 @@ def CmpOp
   let arguments = (ins NyaZy_CmpPredicateAttr:$predicate,
                        AnyType:$lhs,
                        AnyType:$rhs);
-  let results = (outs UI1);
+  let results = (outs I1);
 
   let extraClassDeclaration = [{
     static std::optional<nyacc::CmpPredicate> getPredicateByName(mlir::StringRef name);
@@ -566,7 +566,7 @@ def ConditionOp : NyaZyOp<"condition", [
     to the entry block of the region. Otherwise, the loop terminates.
   }];
 
-  let arguments = (ins UI1:$condition);
+  let arguments = (ins I1:$condition);
 
   let assemblyFormat =
       [{ `(` $condition `)` attr-dict  }];

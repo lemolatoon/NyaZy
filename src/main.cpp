@@ -1,5 +1,6 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/IR/AsmState.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinDialect.h"
@@ -48,6 +49,9 @@ std::string readFile(const std::string &filename) {
 }
 
 int main(int argc, char **argv) {
+  mlir::registerAsmPrinterCLOptions();
+  mlir::registerMLIRContextCLOptions();
+  mlir::registerPassManagerCLOptions();
   llvm::cl::opt<std::string> inputFileName(
       llvm::cl::Positional, llvm::cl::desc("<input file>"), llvm::cl::Required);
   llvm::cl::opt<std::string> outputFileName(
@@ -122,8 +126,14 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  mlir::PassManager pm(&context);
-  pm.addPass(nyacc::createNyaZyToLLVMPass());
+  mlir::PassManager pm(&context, module.get()->getName().getStringRef());
+  if (mlir::failed(mlir::applyPassManagerCLOptions(pm))) {
+    llvm::errs() << "Failed to apply pass manager command line options.\n";
+    return 1;
+  }
+  pm.addPass(nyacc::createNyaZyToStdPass());
+  pm.addPass(nyacc::createStdToLLVMPass());
+  pm.addPass(nyacc::createNyaZyPrintToLLVMPass());
 
   if (mlir::failed(pm.run(*module))) {
     llvm::errs() << "Failed to lower to LLVM IR\n";

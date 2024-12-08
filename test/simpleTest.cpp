@@ -3,6 +3,7 @@
 #include "ir/Pass.h"
 #include "lexer.h"
 #include "mlir/Pass/Pass.h"
+#include "mlir/Pass/PassManager.h"
 #include "mlirGen.h"
 #include "parser.h"
 #include "gtest/gtest.h"
@@ -18,6 +19,7 @@
 #include <mlir/Dialect/MemRef/IR/MemRef.h>
 #include <mlir/Dialect/SCF/IR/SCF.h>
 #include <mlir/IR/MLIRContext.h>
+#include <mlir/IR/OperationSupport.h>
 #include <mlir/IR/Verifier.h>
 #include <mlir/Pass/PassManager.h>
 #include <mlir/Support/LLVM.h>
@@ -145,8 +147,21 @@ std::unique_ptr<llvm::Module> createLLVMModule(const std::string src,
       << "Module verification failed:\n"
       << src << "\n";
 
+  context.disableMultithreading();
+
   mlir::PassManager pm(&context);
-  pm.addPass(nyacc::createNyaZyToLLVMPass());
+  pm.addPass(nyacc::createNyaZyToStdPass());
+  pm.addPass(nyacc::createStdToLLVMPass());
+  pm.addPass(nyacc::createNyaZyPrintToLLVMPass());
+
+  const auto shouldPrintBefore =
+      std::function{[](mlir::Pass *, mlir::Operation *) { return false; }};
+  const auto shouldPrintAfter =
+      std::function{[](mlir::Pass *, mlir::Operation *) { return true; }};
+  pm.enableIRPrinting(shouldPrintBefore, shouldPrintAfter, true, false, true,
+                      llvm::outs(), mlir::OpPrintingFlags{});
+
+  context.enableMultithreading();
 
   EXPECT_TRUE(mlir::succeeded(pm.run(*module))) << "PassManager failed:\n"
                                                 << src << "\n";
