@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
 cmake_policy(SET CMP0116 NEW)
-cmake_policy(SET CMP0135 NEW)
+# cmake_policy(SET CMP0135 NEW)
 project(nyazy LANGUAGES CXX C)
 
 set(CMAKE_CXX_STANDARD 23)
@@ -14,6 +14,12 @@ set(MLIR_DIR ${CMAKE_BINARY_DIR}/../thirdparty/build/llvm/install/lib/cmake/mlir
 
 find_package(LLVM REQUIRED CONFIG)
 find_package(MLIR REQUIRED CONFIG)
+
+set(tl-expected_INSTALL_DIR ${CMAKE_BINARY_DIR}/../thirdparty/build/tl-expected/install)
+set(tl-expected_DIR ${tl-expected_INSTALL_DIR}/share/cmake/tl-expected)
+
+find_package(tl-expected REQUIRED CONFIG)
+include_directories(${tl-expected_INSTALL_DIR}/include)
 
 # mlir related settings -----
 # ref: llvm-project/mlir/examples/standalone/CMakeLists.txt

@@ -65,7 +65,7 @@ struct BinaryOpLowering : public mlir::OpConversionPattern<BinaryOp> {
       : mlir::OpConversionPattern<BinaryOp>(ctx) {}
 
   mlir::LogicalResult
-  matchAndRewrite(BinaryOp op, BinaryOp::Adaptor adaptor [[maybe_unused]],
+  matchAndRewrite(BinaryOp op, typename BinaryOp::Adaptor adaptor [[maybe_unused]],
                   mlir::ConversionPatternRewriter &rewriter) const override {
     auto binOp = mlir::cast<BinaryOp>(op);
     rewriter.replaceOp(op, rewriter.create<LoweredBinaryOp>(

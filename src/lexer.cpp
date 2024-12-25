@@ -1,9 +1,7 @@
 #include "lexer.h"
-#include <__expected/expected.h>
 #include <cctype>
 #include <error.h>
-#include <expected>
-#include <fmt/core.h>
+#include <tl/expected.hpp>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -30,15 +28,15 @@ void Lexer::nextLine() {
   currentLocation_.line++;
   currentLocation_.col = 0;
 }
-std::expected<std::vector<Token>, ErrorInfo> Lexer::tokenize() {
+tl::expected<std::vector<Token>, ErrorInfo> Lexer::tokenize() {
   std::vector<Token> tokens;
 
   while (!atEof()) {
     // tokenize integer
-    if (std::isdigit(input_[pos_])) {
+    if (!atEof() && std::isdigit(input_[pos_])) {
       const auto start_pos = pos_;
       auto loc = currentLocation();
-      while (std::isdigit(input_[pos_])) {
+      while (!atEof() && std::isdigit(input_[pos_])) {
         if (start_pos == pos_ && input_[pos_] == '0') {
           advance();
           break;
@@ -87,9 +85,10 @@ std::expected<std::vector<Token>, ErrorInfo> Lexer::tokenize() {
     oss << "Unexpected character: " << input_[pos_];
     error_msg = oss.str();
     ErrorInfo info{.message = error_msg, .location = currentLocation()};
-    return std::unexpected{info};
+    return tl::unexpected{info};
   }
 
+  tokens.emplace_back(Token::TokenKind::Eof, "", currentLocation());
   return tokens;
 }
 
